@@ -99,3 +99,86 @@ const MarketAnalyzerScreen = () => {
         </SafeAreaView>
     );
 };
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background,
+    },
+    scrollContent: {
+        padding: SIZES.padding,
+        paddingBottom: 100,
+    },
+    headerTitle: {
+        fontSize: SIZES.h1,
+        fontWeight: 'bold',
+        color: COLORS.text,
+        marginBottom: 20,
+        marginTop: 10,
+    },
+    card: {
+        backgroundColor: COLORS.white,
+        borderRadius: SIZES.radius,
+        padding: 16,
+        marginBottom: SIZES.padding,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    cardTitle: {
+        fontSize: SIZES.h3,
+        fontWeight: '600',
+        color: COLORS.text,
+    },
+    chart: {
+        marginVertical: 8,
+        borderRadius: 16,
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    statCard: {
+        width: '31%',
+        alignItems: 'center',
+        padding: 10,
+    },
+    iconBox: {
+        padding: 10,
+        borderRadius: 20,
+        marginBottom: 8,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: COLORS.textLight,
+    },
+    statValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: COLORS.text,
+        marginTop: 2,
+    },
+    insightCard: {
+        backgroundColor: '#37474F',
+        borderRadius: SIZES.radius,
+        padding: 20,
+    },
+    insightTitle: {
+        color: COLORS.white,
+        fontWeight: 'bold',
+        fontSize: 16,
+        marginBottom: 8,
+    },
+    insightDesc: {
+        color: '#CFD8DC',
+        lineHeight: 20,
+    }
+});
+
+export default MarketAnalyzerScreen;
