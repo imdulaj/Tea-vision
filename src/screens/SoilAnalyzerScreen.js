@@ -9,12 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Droplet,
-  Thermometer,
-  MapPin,
-  Bell,
-} from 'lucide-react-native';
+import { Droplet, Thermometer, MapPin, Bell } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 import { COLORS, SIZES } from '../constants/Theme';
 import useLiveLocation from '../hooks/useLiveLocation';
@@ -24,6 +20,7 @@ import {
 } from '../services/weatherService';
 
 const SoilAnalyzerScreen = () => {
+  const navigation = useNavigation();
   const { location, address } = useLiveLocation();
 
   const [hasAlert, setHasAlert] = useState(false);
@@ -32,19 +29,19 @@ const SoilAnalyzerScreen = () => {
   const [advisory, setAdvisory] = useState([]);
   const [irrigationPlan, setIrrigationPlan] = useState([]);
 
-  const soilMoisture = 65;
+  const soilMoisture = 65; // dummy data
 
   useEffect(() => {
     if (!location) return;
 
-    const checkWeather = async () => {
+    const loadWeatherData = async () => {
       try {
         const weather = await getWeather(
           location.latitude,
           location.longitude
         );
 
-        if (!weather || !weather.main || !weather.weather) return;
+        if (!weather?.main || !weather?.weather) return;
 
         const temp = weather.main.temp;
         const condition = weather.weather[0].main;
@@ -54,8 +51,8 @@ const SoilAnalyzerScreen = () => {
 
         generateAdvisory(temp, condition);
         generateIrrigationSchedule(temp, condition);
-      } catch (err) {
-        console.log('Weather error:', err);
+      } catch (error) {
+        console.log('Weather error:', error);
       }
     };
 
@@ -66,17 +63,17 @@ const SoilAnalyzerScreen = () => {
           location.longitude
         );
         setForecast(data);
-      } catch (err) {
-        console.log('Forecast error:', err);
+      } catch (error) {
+        console.log('Forecast error:', error);
       }
     };
 
-    checkWeather();
+    loadWeatherData();
     loadForecast();
 
-    const interval = setInterval(checkWeather, 120000);
+    const interval = setInterval(loadWeatherData, 120000);
     return () => clearInterval(interval);
-  }, [location, forecast]);
+  }, [location]);
 
   /* 🧠 SMART ADVISORY */
   const generateAdvisory = (temp, condition) => {
@@ -127,18 +124,25 @@ const SoilAnalyzerScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* 🌈 HEADER */}
-        <LinearGradient colors={[COLORS.primary, '#66BB6A']} style={styles.headerGradient}>
+        <LinearGradient
+          colors={[COLORS.primary, '#66BB6A']}
+          style={styles.headerGradient}
+        >
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.headerTitleWhite}>Soil Analysis</Text>
-              <Text style={styles.headerSubtitleWhite}>Sensor Node: A-12</Text>
+              <Text style={styles.headerTitle}>Soil Analysis</Text>
+              <Text style={styles.headerSubtitle}>Sensor Node: A-12</Text>
             </View>
 
             <TouchableOpacity
-              onPress={() => latestWeather &&
+              onPress={() =>
+                latestWeather &&
                 Alert.alert(
                   'Latest Weather',
                   `Temperature: ${latestWeather.temp}°C\nCondition: ${latestWeather.condition}`
@@ -170,14 +174,24 @@ const SoilAnalyzerScreen = () => {
           )}
         </View>
 
-        {/* 🌦 FORECAST */}
+        {/* 🌦 FORECAST PREVIEW */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Next 3 Days Weather</Text>
-          <View style={styles.forecastContainer}>
-            {forecast.map((day, i) => (
-              <View key={i} style={styles.forecastCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Next 3 Days Weather</Text>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('WeatherForecast', { forecast })
+              }
+            >
+              <Text style={styles.viewMore}>View Details</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.forecastRow}>
+            {forecast.map((day, index) => (
+              <View key={index} style={styles.forecastCard}>
                 <Text style={styles.forecastDate}>{day.date}</Text>
-                <Text style={styles.forecastCondition}>{day.condition}</Text>
+                <Text style={styles.forecastCond}>{day.condition}</Text>
                 <Text style={styles.forecastTemp}>{day.temp}°C</Text>
               </View>
             ))}
@@ -187,16 +201,16 @@ const SoilAnalyzerScreen = () => {
         {/* 🧠 ADVISORY */}
         <View style={[styles.card, styles.advisoryCard]}>
           <Text style={styles.sectionTitle}>🧠 Smart Advisory</Text>
-          {advisory.map((a, i) => (
-            <Text key={i} style={styles.advisoryText}>• {a}</Text>
+          {advisory.map((item, i) => (
+            <Text key={i} style={styles.listText}>• {item}</Text>
           ))}
         </View>
 
         {/* 🌱 IRRIGATION */}
         <View style={[styles.card, styles.irrigationCard]}>
           <Text style={styles.sectionTitle}>🌱 Irrigation Schedule</Text>
-          {irrigationPlan.map((p, i) => (
-            <Text key={i} style={styles.advisoryText}>• {p}</Text>
+          {irrigationPlan.map((item, i) => (
+            <Text key={i} style={styles.listText}>• {item}</Text>
           ))}
         </View>
 
@@ -216,7 +230,10 @@ const SoilAnalyzerScreen = () => {
         </View>
 
         {/* ✅ STATUS */}
-        <LinearGradient colors={[COLORS.success, '#81C784']} style={styles.statusCard}>
+        <LinearGradient
+          colors={[COLORS.success, '#81C784']}
+          style={styles.statusCard}
+        >
           <Text style={styles.statusTitle}>Soil Health: Good</Text>
           <Text style={styles.statusDesc}>
             Weather & soil conditions are suitable for cultivation.
@@ -236,7 +253,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     padding: SIZES.padding,
-    paddingBottom: 120, // ⭐ smooth scrolling
+    paddingBottom: 120,
   },
 
   headerGradient: {
@@ -244,9 +261,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 24,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  headerTitleWhite: { fontSize: SIZES.h1, fontWeight: 'bold', color: '#fff' },
-  headerSubtitleWhite: { color: 'rgba(255,255,255,0.9)', marginTop: 4 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: SIZES.h1,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+  },
 
   card: {
     backgroundColor: COLORS.white,
@@ -255,27 +283,43 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     elevation: 3,
   },
-  rowCenter: { flexDirection: 'row', alignItems: 'center' },
-  cardTitle: { marginLeft: 8, fontWeight: '600' },
+
+  rowCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    marginLeft: 8,
+    fontWeight: '600',
+  },
 
   locationMain: {
     marginTop: 10,
-    marginBottom: 6,
     fontSize: 16,
     fontWeight: '600',
   },
-  locationSub: { fontSize: 12, color: COLORS.textLight },
-
-  sectionTitle: {
-    fontWeight: '600',
-    marginBottom: 14,
+  locationSub: {
+    fontSize: 12,
+    color: COLORS.textLight,
     marginTop: 4,
   },
 
-  forecastContainer: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontWeight: '600',
+  },
+  viewMore: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+
+  forecastRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   forecastCard: {
     width: '32%',
@@ -285,7 +329,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forecastDate: { fontSize: 12, color: COLORS.textLight },
-  forecastCondition: { fontWeight: '600', marginVertical: 6 },
+  forecastCond: { fontWeight: '600', marginVertical: 6 },
   forecastTemp: { fontSize: 16, fontWeight: 'bold' },
 
   advisoryCard: {
@@ -298,7 +342,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#2E7D32',
   },
-  advisoryText: {
+  listText: {
     marginBottom: 10,
     lineHeight: 20,
   },
@@ -307,7 +351,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
-    marginTop: 10,
   },
   statBox: {
     width: '48%',
@@ -317,13 +360,27 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
   },
-  statValue: { fontSize: 20, fontWeight: 'bold', marginTop: 6 },
-  statLabel: { color: COLORS.textLight, marginTop: 4 },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 6,
+  },
+  statLabel: {
+    color: COLORS.textLight,
+    marginTop: 4,
+  },
 
   statusCard: {
     padding: 22,
     borderRadius: 16,
   },
-  statusTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 6 },
-  statusDesc: { color: 'rgba(255,255,255,0.9)' },
+  statusTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  statusDesc: {
+    color: 'rgba(255,255,255,0.9)',
+  },
 });
