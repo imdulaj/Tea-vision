@@ -125,7 +125,7 @@ const DiseaseDetectionScreen = ({navigation}) => {
           <View style={styles.resultCard}>
             <View style={styles.row}>
               <View>
-                <Text style={styles.resultTitle}>Blister Blight</Text>
+                <Text style={styles.resultTitle}>Red Rust</Text>
                 <Text style={styles.severityText}>
                   Severity:{" "}
                   <Text style={{ color: COLORS.warning, fontWeight: "bold" }}>
