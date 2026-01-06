@@ -31,6 +31,11 @@ const SoilAnalyzerScreen = () => {
 
   const soilMoisture = 65; // dummy data
 
+  // ✅ Dummy NPK values (UI only)
+  const nitrogen = 70;
+  const phosphorous = 45;
+  const potassium = 60;
+
   useEffect(() => {
     if (!location) return;
 
@@ -80,16 +85,16 @@ const SoilAnalyzerScreen = () => {
     const advice = [];
 
     if (temp > 30 && soilMoisture < 50)
-      advice.push('💧 Irrigation recommended due to high temperature.');
+      advice.push(' Irrigation recommended due to high temperature.');
 
     if (condition === 'Rain')
-      advice.push('🌧 Rain detected. Avoid irrigation today.');
+      advice.push(' Rain detected. Avoid irrigation today.');
 
     if (forecast.some(day => day.condition === 'Rain'))
-      advice.push('☁ Rain expected soon. Delay fertilization.');
+      advice.push(' Rain expected soon. Delay fertilization.');
 
     if (temp < 30 && soilMoisture >= 45 && condition !== 'Rain')
-      advice.push('✅ Conditions are optimal. No action required.');
+      advice.push(' Conditions are optimal. No action required.');
 
     setAdvisory(advice);
   };
@@ -99,24 +104,24 @@ const SoilAnalyzerScreen = () => {
     const plan = [];
 
     if (condition === 'Rain')
-      plan.push('🚫 Today: Skip irrigation (rain detected)');
+      plan.push(' Today: Skip irrigation (rain detected)');
     else if (temp > 30 && soilMoisture < 50)
-      plan.push('💧 Today: Moderate irrigation');
+      plan.push(' Today: Moderate irrigation');
     else
-      plan.push('💦 Today: Light irrigation');
+      plan.push(' Today: Light irrigation');
 
     const tomorrow = forecast[0];
     plan.push(
       tomorrow?.condition === 'Rain'
-        ? '🚫 Tomorrow: Skip irrigation (rain expected)'
-        : '💦 Tomorrow: Light irrigation'
+        ? ' Tomorrow: Skip irrigation (rain expected)'
+        : ' Tomorrow: Light irrigation'
     );
 
     const dayAfter = forecast[1];
     plan.push(
       dayAfter?.condition === 'Rain'
-        ? '🚫 Day After: Skip irrigation (rain expected)'
-        : '💦 Day After: Light irrigation'
+        ? ' Day After: Skip irrigation (rain expected)'
+        : ' Day After: Light irrigation'
     );
 
     setIrrigationPlan(plan);
@@ -124,16 +129,10 @@ const SoilAnalyzerScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
 
         {/* 🌈 HEADER */}
-        <LinearGradient
-          colors={[COLORS.primary, '#66BB6A']}
-          style={styles.headerGradient}
-        >
+        <LinearGradient colors={[COLORS.primary, '#66BB6A']} style={styles.headerGradient}>
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.headerTitle}>Soil Analysis</Text>
@@ -174,14 +173,59 @@ const SoilAnalyzerScreen = () => {
           )}
         </View>
 
-        {/* 🌦 FORECAST PREVIEW */}
+        {/* 📊 NPK GRAPH (ADDED) */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>🌾 Soil Nutrient Levels (NPK)</Text>
+
+          {[
+            { label: 'N', value: nitrogen, color: '#4CAF50' },
+            { label: 'P', value: phosphorous, color: '#FFC107' },
+            { label: 'K', value: potassium, color: '#03A9F4' },
+          ].map((item, index) => (
+            <View key={index} style={styles.npkRow}>
+              <Text style={styles.npkLabel}>{item.label}</Text>
+              <View style={styles.barBg}>
+                <View
+                  style={[
+                    styles.barFill,
+                    { width: `${item.value}%`, backgroundColor: item.color },
+                  ]}
+                />
+              </View>
+              <Text style={styles.npkValue}>{item.value}%</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* 🌿 SUITABLE FERTILIZER */}
+        <LinearGradient colors={[COLORS.success, '#81C784']} style={styles.statusCard}>
+          <Text style={styles.statusTitle}>Suitable Fertilizer : Urea</Text>
+          <Text style={styles.statusDesc}>
+            Weather & soil conditions are suitable for cultivation.
+          </Text>
+        </LinearGradient>
+
+        {/* 💧 MOISTURE & TEMPERATURE */}
+        <View style={styles.soilStats}>
+          <View style={styles.statBox}>
+            <Droplet color="#2196F3" size={28} />
+            <Text style={styles.statValue}>{soilMoisture}%</Text>
+            <Text style={styles.statLabel}>Moisture</Text>
+          </View>
+
+          <View style={styles.statBox}>
+            <Thermometer color="#F44336" size={28} />
+            <Text style={styles.statValue}>25°C</Text>
+            <Text style={styles.statLabel}>Temperature</Text>
+          </View>
+        </View>
+
+        {/* 🌦 FORECAST */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Next 3 Days Weather</Text>
             <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('WeatherForecast', { forecast })
-              }
+              onPress={() => navigation.navigate('WeatherForecast', { forecast })}
             >
               <Text style={styles.viewMore}>View Details</Text>
             </TouchableOpacity>
@@ -214,32 +258,6 @@ const SoilAnalyzerScreen = () => {
           ))}
         </View>
 
-        {/* 💧 SOIL STATS */}
-        <View style={styles.soilStats}>
-          <View style={styles.statBox}>
-            <Droplet color="#2196F3" size={28} />
-            <Text style={styles.statValue}>{soilMoisture}%</Text>
-            <Text style={styles.statLabel}>Moisture</Text>
-          </View>
-
-          <View style={styles.statBox}>
-            <Thermometer color="#F44336" size={28} />
-            <Text style={styles.statValue}>25°C</Text>
-            <Text style={styles.statLabel}>Temperature</Text>
-          </View>
-        </View>
-
-        {/* ✅ STATUS */}
-        <LinearGradient
-          colors={[COLORS.success, '#81C784']}
-          style={styles.statusCard}
-        >
-          <Text style={styles.statusTitle}>Soil Health: Good</Text>
-          <Text style={styles.statusDesc}>
-            Weather & soil conditions are suitable for cultivation.
-          </Text>
-        </LinearGradient>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -261,16 +279,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 24,
   },
+
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+
   headerTitle: {
     fontSize: SIZES.h1,
     fontWeight: 'bold',
     color: '#fff',
   },
+
   headerSubtitle: {
     color: 'rgba(255,255,255,0.9)',
     marginTop: 4,
@@ -288,6 +309,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   cardTitle: {
     marginLeft: 8,
     fontWeight: '600',
@@ -298,6 +320,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
   locationSub: {
     fontSize: 12,
     color: COLORS.textLight,
@@ -309,9 +332,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+
   sectionTitle: {
     fontWeight: '600',
+    marginBottom: 12,
   },
+
   viewMore: {
     color: COLORS.primary,
     fontWeight: '600',
@@ -321,6 +347,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+
   forecastCard: {
     width: '32%',
     backgroundColor: '#F1F8E9',
@@ -328,6 +355,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
+
   forecastDate: { fontSize: 12, color: COLORS.textLight },
   forecastCond: { fontWeight: '600', marginVertical: 6 },
   forecastTemp: { fontSize: 16, fontWeight: 'bold' },
@@ -337,11 +365,13 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#FBC02D',
   },
+
   irrigationCard: {
     backgroundColor: '#E8F5E9',
     borderLeftWidth: 4,
     borderLeftColor: '#2E7D32',
   },
+
   listText: {
     marginBottom: 10,
     lineHeight: 20,
@@ -352,6 +382,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 24,
   },
+
   statBox: {
     width: '48%',
     backgroundColor: '#FAFAFA',
@@ -360,11 +391,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
   },
+
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 6,
   },
+
   statLabel: {
     color: COLORS.textLight,
     marginTop: 4,
@@ -373,14 +406,46 @@ const styles = StyleSheet.create({
   statusCard: {
     padding: 22,
     borderRadius: 16,
+    marginBottom: 20,
   },
+
   statusTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 6,
   },
+
   statusDesc: {
     color: 'rgba(255,255,255,0.9)',
+  },
+
+  npkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  npkLabel: {
+    width: 20,
+    fontWeight: 'bold',
+  },
+
+  npkValue: {
+    width: 40,
+    textAlign: 'right',
+  },
+
+  barBg: {
+    flex: 1,
+    height: 10,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 6,
+    marginHorizontal: 8,
+  },
+
+  barFill: {
+    height: 10,
+    borderRadius: 6,
   },
 });
