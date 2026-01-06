@@ -50,7 +50,7 @@ const DiseaseComparisonScreen = ({ navigation }) => {
                         <Image source={redRustImage} style={styles.diseaseImage} />
                         <Text style={styles.diseaseName}>Red Rust</Text>
                         <View style={styles.probabilityBadge}>
-                            <Text style={styles.probabilityText}>40% Match</Text>
+                            <Text style={styles.probabilityText}>10% Match</Text>
                         </View>
                     </View>
 
@@ -64,7 +64,7 @@ const DiseaseComparisonScreen = ({ navigation }) => {
                         <Image source={potassiumDeficiencyImage} style={styles.diseaseImage} />
                         <Text style={styles.diseaseName}>Potassium Deficiency</Text>
                         <View style={[styles.probabilityBadge, { backgroundColor: '#FFEBEE' }]}>
-                            <Text style={[styles.probabilityText, { color: COLORS.error }]}>60% Match</Text>
+                            <Text style={[styles.probabilityText, { color: COLORS.error }]}>90% Match</Text>
                         </View>
                     </View>
                 </View>

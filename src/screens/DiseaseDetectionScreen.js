@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react-native";
 
-const DiseaseDetectionScreen = () => {
+const DiseaseDetectionScreen = ({navigation}) => {
   const [imageCaptured, setImageCaptured] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedImage, setScannedImage] = useState(null);
