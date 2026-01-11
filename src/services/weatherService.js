@@ -31,3 +31,29 @@ export async function getThreeDayForecast(lat, lon) {
     condition: item.weather[0].main,
   }));
 }
+
+/* 🕒 HOURLY FORECAST (Next 24 Hours) */
+export async function getHourlyForecast(lat, lon) {
+  const response = await fetch(
+    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+  );
+
+  const data = await response.json();
+
+  if (!data.list) return [];
+
+  // Return next 8 intervals (3 hours * 8 = 24 hours)
+  return data.list.slice(0, 8).map(item => {
+    const date = new Date(item.dt * 1000);
+    // Format: "12 PM"
+    const hours = date.getHours();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const formattedHour = hours % 12 || 12; // '0' becomes '12'
+
+    return {
+      time: `${formattedHour} ${period}`,
+      temp: Math.round(item.main.temp),
+      icon: item.weather[0].main, // Maps to WeatherIcon condition
+    };
+  });
+}
