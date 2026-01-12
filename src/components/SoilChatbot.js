@@ -15,6 +15,7 @@ import { Send, ArrowLeft, Bot, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants/Theme';
+import { sendMessageToGemini } from '../services/ChatService';
 
 const SoilChatbot = () => {
     const navigation = useNavigation();
@@ -30,7 +31,31 @@ const SoilChatbot = () => {
     const [isTyping, setIsTyping] = useState(false);
     const flatListRef = useRef();
 
-    const handleSend = () => {
+    // Hide Bottom Tab Bar when on this screen
+    React.useLayoutEffect(() => {
+        navigation.getParent()?.setOptions({
+            tabBarStyle: { display: 'none' }
+        });
+        return () => navigation.getParent()?.setOptions({
+            tabBarStyle: {
+                position: 'absolute',
+                bottom: 20,
+                left: 20,
+                right: 20,
+                elevation: 5,
+                backgroundColor: '#FFFFFF',
+                borderRadius: 30,
+                height: 70,
+                borderTopWidth: 0,
+                shadowColor: '#2E7D32',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.5,
+            }
+        });
+    }, [navigation]);
+
+    const handleSend = async () => {
         if (inputText.trim().length === 0) return;
 
         const userMsg = {
@@ -44,33 +69,18 @@ const SoilChatbot = () => {
         setInputText('');
         setIsTyping(true);
 
-        // Simulate bot response
-        setTimeout(() => {
-            const botResponse = getBotResponse(userMsg.text);
-            const botMsg = {
-                id: Date.now() + 1,
-                text: botResponse,
-                sender: 'bot',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            };
-            setMessages((prev) => [...prev, botMsg]);
-            setIsTyping(false);
-        }, 1500);
-    };
+        // Call Gemini API
+        const botReplyText = await sendMessageToGemini(userMsg.text);
 
-    const getBotResponse = (text) => {
-        const lowerText = text.toLowerCase();
-        if (lowerText.includes('fertilizer') || lowerText.includes('urea')) {
-            return "For tea plants, a balanced NPK ratio is crucial. Based on current soil data, applying Urea is recommended to boost Nitrogen levels.";
-        } else if (lowerText.includes('water') || lowerText.includes('irrigation')) {
-            return "Optimal soil moisture is between 60-80%. Ensure drainage channels are clear to prevent waterlogging, especially during heavy rains.";
-        } else if (lowerText.includes('ph') || lowerText.includes('acid')) {
-            return "Tea thrives in acidic soil (pH 4.5 - 5.5). If pH is too high, consider using Sulfur or Aluminum Sulfate to lower it.";
-        } else if (lowerText.includes('hello') || lowerText.includes('hi')) {
-            return "Hello there! How can I help you with your tea plantation today?";
-        } else {
-            return "I'm still learning! Could you please ask about soil nutrients, pH levels, or irrigation schedules?";
-        }
+        const botMsg = {
+            id: Date.now() + 1,
+            text: botReplyText,
+            sender: 'bot',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        setMessages((prev) => [...prev, botMsg]);
+        setIsTyping(false);
     };
 
     useEffect(() => {

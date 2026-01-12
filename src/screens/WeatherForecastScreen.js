@@ -1,15 +1,8 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Sun, Cloud, CloudRain, Droplets, Wind, AlertCircle } from 'lucide-react-native';
+import { Cloud, Sun, CloudRain, Wind, Droplet, Calendar, Umbrella, ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { useEffect, useState } from 'react';
@@ -103,7 +96,16 @@ const WeatherForecastScreen = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#E3F2FD' }}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      {/* ☁️ SKY BACKGROUND GRADIENT */}
+      <LinearGradient
+        colors={['#E3F2FD', '#FFFFFF', '#FAFAFA']} // Soft Sky Blue -> White
+        style={styles.backgroundGradient}
+      />
+      <View style={styles.backgroundOverlay} />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -259,9 +261,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  backgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(241, 248, 233, 0.15)', // Reduced opacity to show more image
+  },
 
   /* 🌈 HERO HEADER */
 
+  /* 🌈 HERO HEADER */
+  /* 🌈 HERO HEADER */
   header: {
     padding: 24,
     paddingTop: 24, // Reduced top padding as it's now detached from top edge
@@ -381,9 +400,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text, // Black text for light background
+    marginBottom: 8,
   },
   locationBadge: {
     backgroundColor: '#E8F5E9',

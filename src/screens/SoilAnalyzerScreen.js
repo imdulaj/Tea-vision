@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Droplet, Thermometer, MapPin, Bell, Cloud, CloudRain, Sun, X, Leaf, FlaskConical, MessageCircle } from 'lucide-react-native';
+import { Droplet, Thermometer, MapPin, Bell, Cloud, CloudRain, Sun, X, Leaf, FlaskConical, MessageCircle, Sprout, CheckCircle, ChevronRight, Activity, Calendar } from 'lucide-react-native';
 
 
 import { useNavigation } from '@react-navigation/native';
@@ -134,6 +136,13 @@ const SoilAnalyzerScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      {/* 🌍 EARTHY BACKGROUND GRADIENT */}
+      <LinearGradient
+        colors={['#FFF8E1', '#F1F8E9', '#E8F5E9']} // Cream -> Pale Green
+        style={styles.backgroundGradient}
+      />
       <ScrollView contentContainerStyle={styles.scrollContent}>
 
         {/* 🌈 HEADER */}
@@ -143,11 +152,11 @@ const SoilAnalyzerScreen = () => {
           colors={['#1B5E20', '#2E7D32', '#66BB6A']} // Green/Tea Plantation Gradient (Matched)
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.header}
+          style={[styles.header, { paddingTop: 40 }]}
         >
           {/* Watermark Icon */}
           <View style={styles.watermarkContainer}>
-            <Droplet size={140} color="rgba(255, 255, 255, 0.1)" />
+            <Droplet size={100} color="rgba(255, 255, 255, 0.1)" />
           </View>
 
           <View style={styles.headerTop}>
@@ -208,67 +217,64 @@ const SoilAnalyzerScreen = () => {
           </View>
         </View>
 
-        {/* 📊 NPK GRAPH (ADDED) */}
-        {/* 📊 NUTRIENT HEALTH */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>🌾 Soil Nutrient Levels</Text>
+        {/* 🔘 DASHBOARD NAVIGATION */}
+        <View style={styles.dashboardGrid}>
 
-          {[
-            { label: 'Nitrogen (N)', value: nitrogen, max: 100, color: '#4CAF50' },
-            { label: 'Phosphorous (P)', value: phosphorous, max: 100, color: '#FFC107' },
-            { label: 'Potassium (K)', value: potassium, max: 100, color: '#03A9F4' },
-          ].map((item, index) => (
-            <View key={index} style={styles.npkRow}>
-              <View style={styles.npkInfo}>
-                <Text style={styles.npkLabel}>{item.label}</Text>
-                <Text style={styles.npkValue}>{item.value} ppm</Text>
-              </View>
-              <View style={styles.barBg}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { width: `${(item.value / item.max) * 100}%`, backgroundColor: item.color },
-                  ]}
-                />
-              </View>
+          {/* Soil Health Button */}
+          <TouchableOpacity
+            style={styles.dashButton}
+            onPress={() => navigation.navigate('SoilHealth', {
+              soilMoisture,
+              temp: latestWeather?.temp || 0,
+              humidity: latestWeather?.humidity || 0
+            })}
+          >
+            <View style={[styles.dashIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Activity size={32} color="#2E7D32" />
             </View>
-          ))}
+            <View style={styles.dashContent}>
+              <Text style={styles.dashTitle}>Soil Health</Text>
+              <Text style={styles.dashSubtitle}>NPK & Fertilizer</Text>
+            </View>
+            <ChevronRight size={20} color="#BDBDBD" />
+          </TouchableOpacity>
+
+          {/* Smart Advisory Button */}
+          <TouchableOpacity
+            style={styles.dashButton}
+            onPress={() => navigation.navigate('SmartAdvisory', { advisory })}
+          >
+            <View style={[styles.dashIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Sprout size={32} color="#F57F17" />
+            </View>
+            <View style={styles.dashContent}>
+              <Text style={styles.dashTitle}>Smart Advisory</Text>
+              <Text style={styles.dashSubtitle}>Growth Insights</Text>
+            </View>
+            <ChevronRight size={20} color="#BDBDBD" />
+          </TouchableOpacity>
+
+          {/* Irrigation Button */}
+          <TouchableOpacity
+            style={styles.dashButton}
+            onPress={() => navigation.navigate('IrrigationSchedule', { irrigationPlan })}
+          >
+            <View style={[styles.dashIcon, { backgroundColor: '#E1F5FE' }]}>
+              <Calendar size={32} color="#0288D1" />
+            </View>
+            <View style={styles.dashContent}>
+              <Text style={styles.dashTitle}>Irrigation</Text>
+              <Text style={styles.dashSubtitle}>Schedule & Plans</Text>
+            </View>
+            <ChevronRight size={20} color="#BDBDBD" />
+          </TouchableOpacity>
+
         </View>
-
-        {/* 🌿 FERTILIZER RECOMMENDATION */}
-        {/* 🌿 FERTILIZER RECOMMENDATION */}
-        <LinearGradient
-          colors={['#1B5E20', '#2E7D32', '#43A047']} // Deep Emerald Gradient
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.statusCard}
-        >
-          {/* Watermark */}
-          <View style={styles.cardWatermark}>
-            <Leaf size={100} color="rgba(255,255,255,0.08)" />
-          </View>
-
-          <View style={styles.statusRow}>
-            <View style={styles.statusIcon}>
-              <FlaskConical size={32} color="#fff" />
-            </View>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.statusLabel}>PRESCRIPTION</Text>
-              <Text style={styles.statusTitle}>Apply Urea</Text>
-              <Text style={styles.statusDesc}>
-                Boost nitrogen levels to support leaf growth.
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>View Dosage</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
 
         {/* 🌦 FORECAST */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Next 3 Days Weather</Text>
+            <Text style={styles.sectionTitle}>Weather Outlook</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('WeatherForecast', { forecast })}
             >
@@ -286,36 +292,10 @@ const SoilAnalyzerScreen = () => {
             ))}
           </View>
         </View>
-
-        {/* 🧠 ADVISORY */}
-        <View style={[styles.card, styles.advisoryCard]}>
-          <Text style={styles.sectionTitle}>🧠 Smart Advisory</Text>
-          {advisory.map((item, i) => (
-            <Text key={i} style={styles.listText}>• {item}</Text>
-          ))}
-        </View>
-
-        {/* 🌱 IRRIGATION */}
-        <View style={[styles.card, styles.irrigationCard]}>
-          <Text style={styles.sectionTitle}>🌱 Irrigation Schedule</Text>
-          {irrigationPlan.map((item, i) => (
-            <Text key={i} style={styles.listText}>• {item}</Text>
-          ))}
-        </View>
       </ScrollView>
 
       {/* 💬 CHATBOT FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('SoilChatbot')}
-      >
-        <LinearGradient
-          colors={[COLORS.primary, COLORS.primaryLight]}
-          style={styles.fabGradient}
-        >
-          <MessageCircle size={28} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
+
 
       {/* 🔔 CUSTOM NOTIFICATION MODAL */}
       <Modal
@@ -378,21 +358,32 @@ export default SoilAnalyzerScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
+  /* 🌈 BACKGROUND */
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+
   scrollContent: {
     padding: SIZES.padding,
-    paddingBottom: 120,
+    paddingBottom: 150,
   },
 
   /* 🌈 HERO HEADER */
+  /* 🌈 HERO HEADER */
+  /* 🌈 HERO HEADER */
   header: {
-    padding: 24,
-    paddingTop: 24,
-    borderRadius: 32,
+    padding: 20,
+    paddingTop: 20,
+    borderRadius: 24,
     marginTop: 10,
-    marginBottom: 24,
+    marginBottom: 16,
     overflow: 'hidden',
     position: 'relative',
-    minHeight: 220,
+    minHeight: 180,
     justifyContent: 'space-between',
     elevation: 8,
     shadowColor: '#2E7D32', // Matched shadow color to green
@@ -442,7 +433,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
@@ -476,11 +467,19 @@ const styles = StyleSheet.create({
 
 
   card: {
-    backgroundColor: COLORS.white,
-    padding: 18,
-    borderRadius: 16,
+    // Glassmorphism
+    backgroundColor: 'rgba(241, 250, 242, 0.85)', // Very Subtle Green Tint
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 20,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    // Shadow
+    elevation: 4,
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
 
   sectionHeader: {
@@ -535,6 +534,44 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     marginTop: 4,
     fontWeight: '600',
+  },
+  /* DASHBOARD GRID */
+  dashboardGrid: {
+    marginBottom: 24,
+  },
+  dashButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    elevation: 3,
+    shadowColor: '#aaa',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  dashIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  dashContent: {
+    flex: 1,
+  },
+  dashTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  dashSubtitle: {
+    fontSize: 12,
+    color: COLORS.textLight,
   },
 
   /* NPK BARS */
@@ -731,6 +768,132 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     fontWeight: '500',
     marginTop: -4,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  iconContainer: {
+    padding: 10,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  cardText: {
+    fontSize: 15,
+    color: COLORS.text,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  recommendationTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  recommendationText: {
+    color: '#F57F17',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+  /* SCHEDULE STYLES */
+  scheduleItem: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  timeColumn: {
+    width: 70,
+    alignItems: 'flex-end',
+    marginRight: 12,
+    paddingTop: 2,
+  },
+  scheduleTime: {
+    fontWeight: '700',
+    color: COLORS.text,
+    fontSize: 14,
+  },
+  scheduleStatus: {
+    color: COLORS.textLight,
+    fontSize: 11,
+  },
+  scheduleStatusUpcoming: {
+    color: COLORS.primary,
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  timelineLine: {
+    alignItems: 'center',
+    marginRight: 12,
+    paddingTop: 6,
+  },
+  timelineDotActive: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+    marginBottom: 4,
+  },
+  timelineDotPending: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#2196F3',
+    backgroundColor: '#fff',
+  },
+  timelineConnect: {
+    width: 2,
+    height: 40,
+    backgroundColor: '#E0E0E0',
+  },
+  scheduleContent: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  scheduleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  scheduleTitle: {
+    fontWeight: '600',
+    color: COLORS.text,
+    marginLeft: 8,
+    fontSize: 15,
+  },
+  scheduleDetail: {
+    color: COLORS.textLight,
+    fontSize: 13,
+    marginLeft: 24, // Align with title text
+    marginBottom: 8,
+  },
+  weatherTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 24,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  weatherTagText: {
+    fontSize: 12,
+    color: '#2E7D32',
+    fontWeight: '500',
   },
   modalDivider: {
     height: 1,
