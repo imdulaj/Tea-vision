@@ -6,6 +6,8 @@ import TabNavigator from './src/navigation/TabNavigator';
 import DiseaseComparisonScreen from './src/screens/DiseaseComparisonScreen';
 import { StatusBar } from 'expo-status-bar';
 
+import SoilChatbot from './src/components/SoilChatbot';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -16,6 +18,7 @@ export default function App() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="MainTabs" component={TabNavigator} />
           <Stack.Screen name="DiseaseComparison" component={DiseaseComparisonScreen} />
+          <Stack.Screen name="SoilChatbot" component={SoilChatbot} options={{ animation: 'slide_from_bottom' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
