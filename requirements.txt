@@ -1,0 +1,14 @@
+torch
+ultralytics
+flask
+pillow
+numpy
+tensorflow
+psycopg2-binary
+google-cloud-storage
+opencv-python
+Werkzeug
+requests
+pandas
+joblib
+scikit-learn

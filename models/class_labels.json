@@ -1,0 +1,14 @@
+{
+  "classes": [
+    "boron-B",
+    "calcium-Ca",
+    "healthy",
+    "iron-Fe",
+    "magnesium-Mg",
+    "manganese-Mn",
+    "nitrogen-N",
+    "phosphorus-P",
+    "potasium-K"
+  ],
+  "num_classes": 9
+}
