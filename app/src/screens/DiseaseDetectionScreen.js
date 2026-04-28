@@ -218,8 +218,12 @@ const DiseaseDetectionScreen = ({ navigation }) => {
                     <View style={styles.analysisSection}>
                         {/* Image Preview Card */}
                         <View style={styles.previewContainer}>
-                            <Image 
+                           {/* <Image 
                                 source={{ uri: (analysisResult && analysisResult.image) ? `data:image/jpeg;base64,${analysisResult.image}` : scannedImage }} 
+                                style={styles.previewImage} 
+                            />*/}
+                            <Image 
+                                source={{ uri: scannedImage }} 
                                 style={styles.previewImage} 
                             />
                             {!isLoading && (
@@ -315,7 +319,11 @@ const DiseaseDetectionScreen = ({ navigation }) => {
                                         <TouchableOpacity
                                             style={styles.comparisonBtn}
                                             onPress={() => navigation.navigate('DiseaseComparison', {
-                                                scannedImage: analysisResult.image ? `data:image/jpeg;base64,${analysisResult.image}` : scannedImage,
+                                                scannedImage: scannedImage, // ✅ ALWAYS original
+    processedImage: analysisResult?.image 
+        ? `data:image/jpeg;base64,${analysisResult.image}` 
+        : null,
+                                                // scannedImage: analysisResult.image ? `data:image/jpeg;base64,${analysisResult.image}` : scannedImage,
                                                 analysisResult: analysisResult,
                                                 diseaseName: diseaseName,
                                                 formattedDiseaseName: formattedDiseaseName,
@@ -323,7 +331,7 @@ const DiseaseDetectionScreen = ({ navigation }) => {
                                             })}
                                         >
                                             <Info color="#fff" size={18} />
-                                            <Text style={styles.comparisonBtnText}>View Disease Encyclopedia</Text>
+                                            <Text style={styles.comparisonBtnText}>View details</Text>
                                         </TouchableOpacity>
                                     </View>
 

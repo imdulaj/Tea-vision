@@ -7,9 +7,17 @@ import { ArrowLeft, Droplet, Sun } from 'lucide-react-native';
 const DiseaseComparisonScreen = ({ route, navigation }) => {
     // Get passed parameters from DiseaseDetectionScreen
     const { scannedImage, analysisResult, diseaseName, formattedDiseaseName, percentage } = route.params || {};
+    const [showProcessed, setShowProcessed] = React.useState(false);
 
     // Use passed image or fallback to a default
-    const mainImage = scannedImage ? { uri: scannedImage } : require('../../assets/potassium_deficiency.png');
+    // const mainImage = scannedImage ? { uri: scannedImage } : require('../../assets/potassium_deficiency.png');
+    const originalImage = scannedImage
+    ? { uri: scannedImage }
+    : require('../../assets/potassium_deficiency.png');
+
+    const processedImage = analysisResult?.image
+    ? { uri: `data:image/jpeg;base64,${analysisResult.image}` }
+    : null;
 
     // Using specific generated images for diseases
     const redRustImage = require('../../assets/red_rust.png');
@@ -69,11 +77,37 @@ const DiseaseComparisonScreen = ({ route, navigation }) => {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Main Detected Image */}
                 <View style={styles.mainImageContainer}>
-                    <Image source={mainImage} style={styles.mainImage} resizeMode="cover" />
+                    {/* <Image source={mainImage} style={styles.mainImage} resizeMode="cover" /> */}
+                    <Image
+                        source={showProcessed && processedImage ? processedImage : originalImage}
+                        style={styles.mainImage}
+                        resizeMode="cover"
+                    />
                     <View style={styles.overlayLabel}>
                         <Text style={styles.overlayText}>Analyzed Sample</Text>
                     </View>
                 </View>
+
+                <View style={styles.toggleContainer}>
+    <TouchableOpacity
+        style={[styles.toggleBtn, !showProcessed && styles.activeToggle]}
+        onPress={() => setShowProcessed(false)}
+    >
+        <Text style={[styles.toggleText, !showProcessed && styles.activeText]}>
+            Original
+        </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+        style={[styles.toggleBtn, showProcessed && styles.activeToggle]}
+        onPress={() => setShowProcessed(true)}
+        disabled={!processedImage} // disable if no AI image
+    >
+        <Text style={[styles.toggleText, showProcessed && styles.activeText]}>
+            AI Highlight
+        </Text>
+    </TouchableOpacity>
+</View>
 
 
 
@@ -92,9 +126,10 @@ const DiseaseComparisonScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
+                {/* ({confidence}% Affected) */}
                 {/* Selected Diagnosis Detail */}
                 <View style={styles.resultContainer}>
-                    <Text style={styles.resultHeader}>Primary Diagnosis: {formattedDiseaseName || (isRedRust ? 'Red Rust' : (isPotassium ? 'Potassium Deficiency' : predictedClass))} ({confidence}% Affected)</Text>
+                    <Text style={styles.resultHeader}>Primary Diagnosis: {formattedDiseaseName || (isRedRust ? 'Red Rust' : (isPotassium ? 'Potassium Deficiency' : predictedClass))} </Text>
                     <Text style={styles.description}>
                         {isRedRust
                             ? "Symptoms closely match Red Rust. This is characterized by orange/reddish powdery patches on the leaf surface, which can restrict photosynthesis."
@@ -379,6 +414,33 @@ const styles = StyleSheet.create({
         color: COLORS.textLight,
         lineHeight: 18,
     },
+    toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#eee',
+    borderRadius: 25,
+    marginBottom: 20,
+    overflow: 'hidden',
+},
+
+toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+},
+
+activeToggle: {
+    backgroundColor: COLORS.primary,
+},
+
+toggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textLight,
+},
+
+activeText: {
+    color: '#fff',
+},
 });
 
 export default DiseaseComparisonScreen;
