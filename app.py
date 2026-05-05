@@ -196,7 +196,7 @@ except Exception as e:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-# YOLO Disease Segmentation Model
+#find YOLO Disease Segmentation Model
 disease_model = YOLO('best2.pt')
 
 # YOLO Classification Model
@@ -587,6 +587,7 @@ def classify_image():
         max_prob        = float(probs[max_index]) * 100
         predicted_class = class_names[max_index]
 
+        #find confidence threshold handled
         CONF_THRESHOLD = 70
         is_uncertain   = max_prob < CONF_THRESHOLD
         if is_uncertain:
@@ -636,6 +637,7 @@ def classify_leaf():
         from tensorflow.keras.preprocessing import image as keras_image
         IMG_SIZE = (224, 224)
 
+        #find classification model implemented
         img       = keras_image.load_img(temp_path, target_size=IMG_SIZE)
         img_array = keras_image.img_to_array(img) / 255.0
         img_array = np.expand_dims(img_array, axis=0)   # (1, 224, 224, 3)
