@@ -420,7 +420,7 @@ const SoilAnalyzerScreen = () => {
                             activeOpacity={0.8}
                         >
                             <LinearGradient
-                                colors={['#0288D1', '#03A9F4']}
+                                colors={['#2E7D32', '#43A047']}
                                 style={styles.predictBtnGradient}
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                             >
