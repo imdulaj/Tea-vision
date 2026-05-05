@@ -31,6 +31,7 @@ const BiddingScreen = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+    const [activeNotificationTab, setActiveNotificationTab] = useState('market');
     const [latestAlert, setLatestAlert] = useState(null);
     const slideAnim = useRef(new Animated.Value(-100)).current;
 
@@ -53,7 +54,8 @@ const BiddingScreen = () => {
                     message: randomTrend === 'up' 
                         ? `Global Demand: ${randomTea} prices increased by ${randomPercent}%`
                         : `Market Surplus: ${randomTea} prices dropped by ${randomPercent}%`,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    type: 'market'
                 };
 
                 setNotifications(prev => [newAlert, ...prev]);
@@ -147,7 +149,18 @@ const BiddingScreen = () => {
 
     useEffect(() => {
         fetchBids();
+        const interval = setInterval(fetchBids, 5000);
+        return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (selectedBid) {
+            const updatedBid = bids.find(b => b.id === selectedBid.id);
+            if (updatedBid && updatedBid.currentBid !== selectedBid.currentBid) {
+                setSelectedBid(updatedBid);
+            }
+        }
+    }, [bids]);
 
     const fetchBids = async () => {
         const ts = () => new Date().toISOString();
@@ -570,17 +583,32 @@ const BiddingScreen = () => {
                         <View style={styles.modernModalContentLarge}>
                             <View style={styles.modalHeaderRow}>
                                 <View>
-                                    <Text style={styles.modernModalTitle}>Market Alerts</Text>
-                                    <Text style={styles.modalSub}>Global tea price fluctuations</Text>
+                                    <Text style={styles.modernModalTitle}>Alerts Center</Text>
+                                    <Text style={styles.modalSub}>Market updates and bidding alerts</Text>
                                 </View>
                                 <TouchableOpacity onPress={() => setShowNotificationsModal(false)}>
                                     <X color={COLORS.textLight} size={24} />
                                 </TouchableOpacity>
                             </View>
 
+                            <View style={styles.tabContainer}>
+                                <TouchableOpacity
+                                    style={[styles.tab, activeNotificationTab === 'market' && styles.activeTab]}
+                                    onPress={() => setActiveNotificationTab('market')}
+                                >
+                                    <Text style={[styles.tabText, activeNotificationTab === 'market' && styles.activeTabText]}>Global Market</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.tab, activeNotificationTab === 'outbid' && styles.activeTab]}
+                                    onPress={() => setActiveNotificationTab('outbid')}
+                                >
+                                    <Text style={[styles.tabText, activeNotificationTab === 'outbid' && styles.activeTabText]}>Bidding Alerts</Text>
+                                </TouchableOpacity>
+                            </View>
+
                             <ScrollView style={styles.notificationsList} showsVerticalScrollIndicator={false}>
-                                {notifications.length > 0 ? (
-                                    notifications.map((notif) => (
+                                {notifications.filter(n => n.type === activeNotificationTab).length > 0 ? (
+                                    notifications.filter(n => n.type === activeNotificationTab).map((notif) => (
                                         <View key={notif.id} style={styles.notificationItem}>
                                             <View style={[styles.trendIconBox, notif.trend === 'up' ? { backgroundColor: '#E8F5E9' } : { backgroundColor: '#FFEBEE' }]}>
                                                 {notif.trend === 'up' 
@@ -589,19 +617,21 @@ const BiddingScreen = () => {
                                                 }
                                             </View>
                                             <View style={styles.notificationInfo}>
-                                                <Text style={styles.notificationTitle}>{notif.teaType} Market</Text>
+                                                <Text style={styles.notificationTitle}>{notif.teaType} {notif.type === 'market' ? 'Market' : ''}</Text>
                                                 <Text style={styles.notificationMsg}>{notif.message}</Text>
                                                 <Text style={styles.notificationTime}>{notif.time}</Text>
                                             </View>
                                             <View style={[styles.percentBadge, notif.trend === 'up' ? { backgroundColor: '#2E7D32' } : { backgroundColor: '#C62828' }]}>
-                                                <Text style={styles.percentText}>{notif.trend === 'up' ? '+' : '-'}{notif.percentage}%</Text>
+                                                <Text style={styles.percentText}>{notif.trend === 'up' ? '+' : '-'}{notif.percentage === 'N/A' ? '0.0' : notif.percentage}%</Text>
                                             </View>
                                         </View>
                                     ))
                                 ) : (
                                     <View style={styles.emptyState}>
                                         <Bell size={48} color={COLORS.textLight} opacity={0.5} />
-                                        <Text style={styles.emptyStateText}>No market alerts yet.</Text>
+                                        <Text style={styles.emptyStateText}>
+                                            {activeNotificationTab === 'market' ? 'No market alerts yet.' : 'No bidding alerts yet.'}
+                                        </Text>
                                     </View>
                                 )}
                             </ScrollView>
