@@ -5,7 +5,6 @@ import { Sprout, BarChart2, LayoutDashboard, Bug, ShoppingBag, User, CloudRain }
 import { COLORS } from '../constants/Theme';
 
 import HomeScreen from '../screens/HomeScreen';
-import WeatherForecastScreen from '../screens/WeatherForecastScreen';
 import SoilAnalyzerScreen from '../screens/SoilAnalyzerScreen';
 import DiseaseDetectionScreen from '../screens/DiseaseDetectionScreen';
 import MarketAnalyzerScreen from '../screens/MarketAnalyzerScreen';
@@ -23,12 +22,13 @@ const TabNavigator = () => {
                 tabBarStyle: {
                     position: 'absolute',
                     bottom: 20,
-                    left: 20,
-                    right: 20,
+                    left: 15, // Slightly wider to fit 7 tabs comfortably
+                    right: 15,
                     elevation: 5,
                     backgroundColor: COLORS.white,
                     borderRadius: 30, // Round sides
                     height: 70,
+                    paddingBottom: 0, // Fixes vertical alignment centering
                     ...styles.shadow,
                     borderTopWidth: 0,
                 }
@@ -42,7 +42,7 @@ const TabNavigator = () => {
                         <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
                             <LayoutDashboard
                                 color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
+                                size={focused ? 24 : 22}
                             />
                         </View>
                     ),
@@ -56,22 +56,7 @@ const TabNavigator = () => {
                         <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
                             <Sprout
                                 color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
-                            />
-                        </View>
-                    ),
-                }}
-            />
-
-            <Tab.Screen
-                name="Weather"
-                component={WeatherForecastScreen}
-                options={{
-                    tabBarIcon: ({ focused }) => (
-                        <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
-                            <CloudRain
-                                color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
+                                size={focused ? 24 : 22}
                             />
                         </View>
                     ),
@@ -86,7 +71,7 @@ const TabNavigator = () => {
                         <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
                             <Bug
                                 color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
+                                size={focused ? 24 : 22}
                             />
                         </View>
                     ),
@@ -100,7 +85,7 @@ const TabNavigator = () => {
                         <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
                             <BarChart2
                                 color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
+                                size={focused ? 24 : 22}
                             />
                         </View>
                     ),
@@ -114,7 +99,7 @@ const TabNavigator = () => {
                         <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
                             <ShoppingBag
                                 color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
+                                size={focused ? 24 : 22}
                             />
                         </View>
                     ),
@@ -128,7 +113,7 @@ const TabNavigator = () => {
                         <View style={[styles.iconContainer, focused && styles.activeIconContainer]}>
                             <User
                                 color={focused ? COLORS.white : COLORS.textLight}
-                                size={focused ? 28 : 24}
+                                size={focused ? 24 : 22}
                             />
                         </View>
                     ),
@@ -152,13 +137,14 @@ const styles = StyleSheet.create({
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 46, // Slightly smaller to comfortably fit 7 tabs
+        height: 46,
+        borderRadius: 23,
+        marginTop: Platform.OS === 'ios' ? 15 : 0, // Fixes iOS vertical centering
     },
     activeIconContainer: {
         backgroundColor: COLORS.primary, // Pop up effect with background circle
-        marginBottom: 25, // Moves it up
+        transform: [{ translateY: -15 }], // Uses transform instead of margin to prevent layout squashing
         elevation: 10,
         shadowColor: COLORS.primary,
         shadowOffset: { width: 0, height: 5 },

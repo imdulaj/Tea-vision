@@ -7,6 +7,7 @@ import DiseaseComparisonScreen from './src/screens/DiseaseComparisonScreen';
 import MarketHistoryScreen from './src/screens/MarketHistoryScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
+import WeatherForecastScreen from './src/screens/WeatherForecastScreen';
 import { StatusBar } from 'expo-status-bar';
 
 const Stack = createNativeStackNavigator();
@@ -20,6 +21,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="MainTabs" component={TabNavigator} />
+          <Stack.Screen name="WeatherForecast" component={WeatherForecastScreen} />
           <Stack.Screen name="DiseaseComparison" component={DiseaseComparisonScreen} />
           <Stack.Screen name="MarketHistory" component={MarketHistoryScreen} />
         </Stack.Navigator>

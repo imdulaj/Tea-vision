@@ -5,9 +5,10 @@ import {
     ActivityIndicator, RefreshControl, TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES } from '../constants/Theme';
-import { Droplet, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind, MapPin } from 'lucide-react-native';
+import { Droplet, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind, MapPin, ArrowLeft } from 'lucide-react-native';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -24,6 +25,7 @@ const getWeatherIcon = (code) => {
 };
 
 const WeatherForecastScreen = () => {
+    const navigation = useNavigation();
     const [locationName, setLocationName] = useState('Detecting location...');
     const [forecast, setForecast] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -81,12 +83,15 @@ const WeatherForecastScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LinearGradient colors={['#1B5E20', '#2E7D32', '#43A047']} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Weather Forecast</Text>
-                    <View style={styles.locationContainer}>
-                        <MapPin size={16} color="#fff" />
-                        <Text style={styles.locationText}>{locationName}</Text>
+            {/* Header matching Soil Analyzer */}
+            <LinearGradient colors={['#1B5E20', '#2E7D32', '#43A047']} style={styles.headerGradient}>
+                <View style={styles.headerTopRow}>
+                    <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+                        <ArrowLeft color="#fff" size={24} />
+                    </TouchableOpacity>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={styles.headerTitle}>Weather Forecast</Text>
+                        <Text style={styles.headerSub}>{locationName}</Text>
                     </View>
                 </View>
                 <Text style={styles.headerHint}>3-Day Tea Estate Outlook</Text>
@@ -200,16 +205,30 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F5F7F9',
     },
-    header: {
-        paddingTop: 40,
-        paddingBottom: 25,
+    // Header
+    headerGradient: {
+        marginHorizontal: 12,
+        marginTop: 12,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        paddingTop: 20,
+        paddingBottom: 20,
+        borderRadius: 30,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
     },
-    headerContent: {
+    headerTopRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
         alignItems: 'center',
     },
     headerTitle: {
@@ -217,24 +236,17 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
     },
-    locationContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    locationText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
-        marginLeft: 6,
+    headerSub: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 4,
     },
     headerHint: {
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 13,
-        marginTop: 10,
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.6)',
+        marginTop: 12,
+        fontStyle: 'italic',
+        marginLeft: 52, // Align with text
     },
     scrollContent: {
         padding: 16,

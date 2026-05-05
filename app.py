@@ -17,6 +17,47 @@ import database.db_connect as db
 from firebase_integration import get_firebase_fetcher
 from config import FIREBASE_DATABASE_URL, FIREBASE_AUTH_TOKEN
 
+import sqlite3
+
+SQLITE_DB_PATH = "soil_data.db"
+
+def get_sqlite_connection():
+    conn = sqlite3.connect(SQLITE_DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_sqlite_db():
+    conn = get_sqlite_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS soil_readings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        nitrogen REAL,
+        phosphorus REAL,
+        potassium REAL,
+        ph REAL,
+        moisture REAL,
+        temperature REAL,
+        ec REAL,
+        fertilizer_type TEXT,
+        fertilizer_amount REAL
+    )
+    """)
+
+    # Migrate: add new columns if they don't exist yet
+    for col, col_type in [("fertilizer_type", "TEXT"), ("fertilizer_amount", "REAL")]:
+        try:
+            cur.execute(f"ALTER TABLE soil_readings ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+init_sqlite_db()
 # -----------------------------------
 # Prevent Torch / OpenMP thread issues
 # -----------------------------------
@@ -132,25 +173,20 @@ try:
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    conn.commit()
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS soil_readings (
+    CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        nitrogen DECIMAL(10,2),
-        phosphorus DECIMAL(10,2),
-        potassium DECIMAL(10,2),
-        ph DECIMAL(10,2),
-        moisture DECIMAL(10,2),
-        temperature DECIMAL(10,2),
-        humidity DECIMAL(10,2),
-        rainfall DECIMAL(10,2)
+        user_id INTEGER,
+        message TEXT,
+        type TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
     conn.commit()
     cur.close()
     conn.close()
-    print("[INFO] bid_offers and soil_readings tables ensured")
+    print("[INFO] DB tables (bid_offers, notifications) ensured")
 except Exception as e:
     print(f"[WARN] Could not create tables: {e}")
 
@@ -234,14 +270,12 @@ fert_scaler = None
 fert_label_encoder = None
 
 try:
-    from tensorflow.keras.models import load_model
-
     print("📂 Loading fertilizer models...")
 
-    fert_type_model = load_model(os.path.join(MODEL_DIR, "fertilizer_type_model.keras"), compile=False)
+    fert_type_model = joblib.load(os.path.join(MODEL_DIR, "fertilizer_type_model.pkl"))
     print("✅ Type model loaded")
 
-    fert_amount_model = load_model(os.path.join(MODEL_DIR, "fertilizer_amount_model.keras"), compile=False)
+    fert_amount_model = joblib.load(os.path.join(MODEL_DIR, "fertilizer_amount_model.pkl"))
     print("✅ Amount model loaded")
 
     fert_scaler = joblib.load(os.path.join(MODEL_DIR, "scaler.pkl"))
@@ -251,14 +285,120 @@ try:
     print("✅ Label encoder loaded")
 
 except Exception as e:
-    print("❌ MODEL LOADING ERROR:", e)
+    import traceback
+    traceback.print_exc()
+    print("[ERROR] FERTILIZER MODEL LOADING:", e)
 
 
 # ==============================
-# 🤖 PREDICT FERTILIZER
+# LOAD LSTM FERTILIZER MODEL
+# ==============================
+lstm_fert_model = None
+lstm_scaler = None
+lstm_label_encoder = None
+LSTM_SEQ_LENGTH = 15
+LSTM_FEATURES = ["nitrogen", "phosphorus", "potassium", "ph", "moisture", "temperature", "ec"]
+
+try:
+    from tensorflow.keras.models import load_model as keras_load_model
+    lstm_path = os.path.join(MODEL_DIR, "lstm_fertilizer.keras")
+    if os.path.exists(lstm_path):
+        lstm_fert_model = keras_load_model(lstm_path)
+        lstm_scaler = joblib.load(os.path.join(MODEL_DIR, "lstm_scaler.pkl"))
+        lstm_label_encoder = joblib.load(os.path.join(MODEL_DIR, "lstm_label_encoder.pkl"))
+        print(f"[INFO] LSTM fertilizer model loaded (classes: {list(lstm_label_encoder.classes_)})")
+    else:
+        print("[WARN] LSTM model file not found")
+except Exception as e:
+    lstm_fert_model = None
+    print(f"[WARN] LSTM model not loaded: {e}")
+
+# Ensemble weight: XGBoost 60%, LSTM 40%
+XGB_WEIGHT = 0.6
+LSTM_WEIGHT = 0.4
+
+
+def get_lstm_prediction(current_features):
+    """
+    Generates a time-series prediction using the LSTM model.
+    
+    This function:
+    1. Fetches the N most recent historical sensor readings from the local SQLite database.
+    2. Appends the real-time `current_features` to complete the sequence window.
+    3. Feeds this chronologically ordered sequence into the LSTM.
+    4. Returns the predicted fertilizer type, confidence, and amount.
+    
+    Returns `None` if there isn't enough historical data (e.g., a brand new sensor installation),
+    in which case the system safely falls back to the XGBoost-only method.
+    """
+    if not lstm_fert_model or not lstm_scaler or not lstm_label_encoder:
+        return None
+
+    try:
+        conn = get_sqlite_connection()
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT {', '.join(LSTM_FEATURES)} FROM soil_readings ORDER BY id DESC LIMIT ?",
+            (LSTM_SEQ_LENGTH - 1,)
+        )
+        past_rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if len(past_rows) < LSTM_SEQ_LENGTH - 1:
+            return None  # Not enough history
+
+        # Build sequence: past readings (oldest first) + current reading
+        # The LSTM requires strict chronological order to understand trends (e.g. nutrient depletion)
+        past_rows = list(reversed(past_rows))  # Reverse DESC to ASC
+        sequence = []
+        for row in past_rows:
+            sequence.append([row[f] for f in LSTM_FEATURES])
+        sequence.append(current_features)
+
+        # Scale the entire sequence using the pre-fitted MinMaxScaler
+        seq_array = np.array(sequence, dtype=np.float32)
+        seq_scaled = lstm_scaler.transform(seq_array)
+        # Keras models expect a batch dimension: (Batch_Size, Sequence_Length, Features)
+        seq_input = np.expand_dims(seq_scaled, axis=0)  
+
+        # Execute prediction using the multi-output LSTM
+        type_probs, amount_pred = lstm_fert_model.predict(seq_input, verbose=0)
+        
+        # Process Classification Head (Type)
+        type_idx = int(np.argmax(type_probs[0]))
+        lstm_type = lstm_label_encoder.inverse_transform([type_idx])[0]
+        lstm_confidence = float(np.max(type_probs[0])) * 100
+        
+        # Process Regression Head (Amount)
+        lstm_amount = float(amount_pred[0][0])
+        lstm_amount = max(0, min(lstm_amount, 500)) # Sanity clamp
+
+        return {
+            "type": lstm_type,
+            "confidence": round(lstm_confidence, 2),
+            "amount": round(lstm_amount, 2),
+        }
+    except Exception as e:
+        print(f"[WARN] LSTM prediction failed: {e}")
+        return None
+
+
+# ==============================
+# PREDICT FERTILIZER (Ensemble)
 # ==============================
 @app.route("/predict-fertilizer", methods=["POST"])
 def predict_fertilizer():
+    """
+    API endpoint that recommends fertilizer type and amount based on live IoT sensor data.
+    
+    It employs a Weighted Ensemble Model Strategy:
+    - XGBoost (60% weight): Highly accurate for analyzing point-in-time "snapshots" of current soil health.
+    - LSTM (40% weight): Analyzes historical trends (depletion/recovery cycles) over the last N readings.
+    
+    If the LSTM cannot run (due to lack of history or missing files), it automatically
+    gracefully degrades to using only the XGBoost model.
+    """
 
     if not all([fert_type_model, fert_amount_model, fert_scaler, fert_label_encoder]):
         return jsonify({
@@ -267,71 +407,100 @@ def predict_fertilizer():
         }), 500
 
     try:
-        # ✅ Use live sensor data
+        # Use live sensor data
         data = latest_sensor_data
 
         N = float(data["Nitrogen"])
         P = float(data["Phosphorus"])
         K = float(data["Potassium"])
-        pH = float(data["pH"])
+        pH_val = float(data["pH"])
+        moisture = float(data["Moisture"])
+        temp = float(data.get("soil_temp", data.get("Temperature", 0)))
+        ec = float(data["EC"])
 
-        input_data = np.array([[ 
-            N,
-            P,
-            K,
-            float(data["pH"]),
-            float(data["Moisture"]),
-            float(data["soil_temp"]),
-            float(data["EC"])
-        ]])
+        input_data = np.array([[N, P, K, pH_val, moisture, temp, ec]])
 
-        input_scaled = fert_scaler.transform(input_data)
+        # --- XGBoost prediction (The "Snapshot" Expert) ---
+        xgb_type_pred = fert_type_model.predict(input_data)[0]
+        xgb_type = fert_label_encoder.inverse_transform([xgb_type_pred])[0]
 
-        # =========================
-        # 🌱 TEA-SPECIFIC RULES
-        # =========================
-        reason = ""
-
-        if pH > 6.5:
-            fert_type = "Acidifier"
-            confidence = 95.0
-            reason = "Soil pH too high for tea"
-        
-        elif N < 25:
-            fert_type = "Urea"
-            confidence = 95.0
-            reason = "Low Nitrogen level"
-        
-        elif P < 15:
-            fert_type = "DAP"
-            confidence = 95.0
-            reason = "Low Phosphorus level"
-        
-        elif K < 20:
-            fert_type = "MOP"
-            confidence = 95.0
-            reason = "Low Potassium level"
-
+        if hasattr(fert_type_model, "predict_proba"):
+            xgb_probs = fert_type_model.predict_proba(input_data)[0]
+            xgb_confidence = float(np.max(xgb_probs)) * 100
         else:
-            # 🤖 AI prediction (only if soil is balanced)
-            type_pred = fert_type_model.predict(input_scaled, verbose=0)
-            fert_type = fert_label_encoder.inverse_transform([np.argmax(type_pred)])[0]
-            confidence = float(np.max(type_pred)) * 100
-            reason = "AI-based recommendation"
+            xgb_confidence = 100.0
 
-        # 🔢 Amount prediction (always AI)
-        amount = float(fert_amount_model.predict(input_scaled, verbose=0)[0][0])
+        xgb_amount = float(fert_amount_model.predict(input_data)[0])
+        xgb_amount = max(0, min(xgb_amount, 500))
 
-        # 🚨 Safety clamp (avoid weird outputs)
-        amount = max(0, min(amount, 500))
+        # --- LSTM prediction (The "Trend" Expert) ---
+        current_features = [N, P, K, pH_val, moisture, temp, ec]
+        lstm_result = get_lstm_prediction(current_features)
+
+        # --- Ensemble Integration ---
+        if lstm_result:
+            # 1. Weighted ensemble for continuous regression (Amount)
+            final_amount = (XGB_WEIGHT * xgb_amount) + (LSTM_WEIGHT * lstm_result["amount"])
+
+            # 2. Confidence-based ensemble for categorical classification (Type)
+            if lstm_result["type"] == xgb_type:
+                # Both models agree: Boost confidence
+                final_type = xgb_type
+                final_confidence = (XGB_WEIGHT * xgb_confidence) + (LSTM_WEIGHT * lstm_result["confidence"])
+            elif lstm_result["confidence"] > xgb_confidence:
+                # Models disagree: Trust the LSTM if it is highly confident about a historical trend
+                final_type = lstm_result["type"]
+                final_confidence = lstm_result["confidence"]
+            else:
+                # Models disagree: Default to XGBoost snapshot
+                final_type = xgb_type
+                final_confidence = xgb_confidence
+
+            method = "ensemble"
+            reason = "Ensemble: XGBoost + LSTM time-series analysis"
+            print(f"[ENSEMBLE] XGB={xgb_type}({xgb_confidence:.1f}%) + LSTM={lstm_result['type']}({lstm_result['confidence']:.1f}%) -> {final_type}")
+        else:
+            # Fallback: LSTM unavailable (e.g. not enough historical records yet)
+            final_type = xgb_type
+            final_amount = xgb_amount
+            final_confidence = xgb_confidence
+            method = "xgboost_only"
+            reason = "AI-based recommendation (XGBoost)"
+            print(f"[XGB-ONLY] {xgb_type} ({xgb_confidence:.1f}%)")
+
+        # Final safety clamp
+        final_amount = round(max(0, min(final_amount, 500)), 2)
+
+        # Save to SQLite
+        try:
+            conn = get_sqlite_connection()
+            cur = conn.cursor()
+            cur.execute(
+                """INSERT INTO soil_readings
+                   (nitrogen, phosphorus, potassium, ph, moisture, temperature, ec, fertilizer_type, fertilizer_amount)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (N, P, K, pH_val, moisture, temp, ec, final_type, final_amount)
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+            print(f"[DB] Saved: {final_type} @ {final_amount} kg/ha")
+        except Exception as db_err:
+            print(f"[WARN] SQLite save failed: {db_err}")
 
         return jsonify({
             "success": True,
-            "fertilizer_type": fert_type,
-            "amount_kg_per_ha": round(amount, 2),
-            "confidence_percent": round(confidence, 2),
+            "fertilizer_type": final_type,
+            "amount_kg_per_ha": final_amount,
+            "confidence_percent": round(final_confidence, 2),
             "reason": reason,
-            "input_used": data
+            "input_used": data,
+            "model_details": {
+                "xgboost": {"type": xgb_type, "confidence": round(xgb_confidence, 2), "amount": round(xgb_amount, 2)},
+                "lstm": lstm_result if lstm_result else "not_available",
+                "method": method,
+                "weights": {"xgboost": XGB_WEIGHT, "lstm": LSTM_WEIGHT} if lstm_result else None
+            }
         })
 
     except Exception as e:
@@ -789,21 +958,68 @@ def analyze_soil_ml():
 def add_soil_reading():
     try:
         data = request.get_json()
-        conn = db.get_db_connection()
+
+        conn = get_sqlite_connection()
         cur = conn.cursor()
+
         cur.execute(
             """INSERT INTO soil_readings 
-               (nitrogen, phosphorus, potassium, ph, moisture, temperature, humidity, rainfall)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (data['Nitrogen'], data['Phosphorus'], data['Potassium'], data['pH'], 
-             data['Moisture'], data['Temperature'], data['Humidity'], data['Rainfall'])
+               (nitrogen, phosphorus, potassium, ph, moisture, temperature, ec)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                float(data.get("Nitrogen", 0)),
+                float(data.get("Phosphorus", 0)),
+                float(data.get("Potassium", 0)),
+                float(data.get("pH", 0)),
+                float(data.get("Moisture", 0)),
+                float(data.get("Temperature", 0)),
+                float(data.get("EC", 0)) / 100
+            )
         )
+
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({"success": True, "message": "Reading saved"})
+
+        return jsonify({"success": True})
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+def save_firebase_to_sqlite():
+    try:
+        if not firebase_fetcher:
+            return
+
+        data = firebase_fetcher.fetch_soil_data()
+        if not data:
+            return
+
+        conn = get_sqlite_connection()
+        cur = conn.cursor()
+
+        cur.execute(
+            """INSERT INTO soil_readings 
+               (nitrogen, phosphorus, potassium, ph, moisture, temperature, ec)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                data.get("Nitrogen", 0),
+                data.get("Phosphorus", 0),
+                data.get("Potassium", 0),
+                data.get("pH", 0),
+                data.get("Moisture", 0),
+                data.get("Temperature", 0),
+                data.get("EC", 0) / 100
+            )
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        print("SQLite error:", e)
+
 
 @app.route("/soil-history", methods=["POST"])
 def soil_history():
@@ -814,7 +1030,7 @@ def soil_history():
         start_date_str = data.get("start_date")
         end_date_str   = data.get("end_date")
 
-        conn = db.get_db_connection()
+        conn = get_sqlite_connection()
         cur  = conn.cursor()
 
         if mode == "realtime":
@@ -902,6 +1118,8 @@ def predict():
         "predictions": predictions,
         "image":       img_str,
     })
+
+
 
 
 # ===================================
@@ -1033,11 +1251,30 @@ def place_bid():
             conn.close()
             return jsonify({"error": "Bid not found"}), 404
 
+        # Get all distinct previous bidders on this bid_id (excluding the current user)
+        cur.execute("SELECT DISTINCT user_id FROM bid_offers WHERE bid_id = %s AND user_id != %s", (bid_id, user_id))
+        previous_bidders = cur.fetchall()
+
         # Insert bid offer
         cur.execute(
             "INSERT INTO bid_offers (bid_id, user_id, amount, created_at) VALUES (%s, %s, %s, %s)",
             (bid_id, user_id, bid_amount, datetime.utcnow())
         )
+
+        # Create notifications for previous bidders
+        for row in previous_bidders:
+            prev_user_id = row[0]
+            # Fetch bid name for better notification message (optional but nice)
+            cur.execute("SELECT name FROM bids WHERE id = %s", (bid_id,))
+            bid_data = cur.fetchone()
+            bid_name = bid_data[0] if bid_data else f"Item #{bid_id}"
+            
+            message = f"You have been outbid on '{bid_name}'. A new bid of Rs. {bid_amount} was placed."
+            cur.execute(
+                "INSERT INTO notifications (user_id, message, type, created_at) VALUES (%s, %s, %s, %s)",
+                (prev_user_id, message, "outbid", datetime.utcnow())
+            )
+
         conn.commit()
         cur.close()
         conn.close()
@@ -1046,6 +1283,49 @@ def place_bid():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ===================================
+# 7.6️⃣ NOTIFICATIONS
+# ===================================
+@app.route("/notifications/<int:user_id>", methods=["GET"])
+def get_notifications(user_id):
+    try:
+        conn = db.get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, message, type, is_read, created_at FROM notifications WHERE user_id = %s AND is_read = FALSE ORDER BY created_at DESC", 
+            (user_id,)
+        )
+        notifs = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        result = []
+        for row in notifs:
+            result.append({
+                "id": row[0],
+                "message": row[1],
+                "type": row[2],
+                "is_read": row[3],
+                "created_at": row[4].strftime("%H:%M") if row[4] else ""
+            })
+            
+        return jsonify({"success": True, "notifications": result}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/notifications/<int:notif_id>/read", methods=["POST"])
+def mark_notification_read(notif_id):
+    try:
+        conn = db.get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE notifications SET is_read = TRUE WHERE id = %s", (notif_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ===================================

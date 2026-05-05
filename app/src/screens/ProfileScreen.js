@@ -5,15 +5,16 @@ import {
     StyleSheet,
     TouchableOpacity,
     Image,
-    SafeAreaView,
     ActivityIndicator,
     Alert,
     ScrollView,
     Dimensions
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SIZES, FONTS } from '../constants/Theme';
-import { User, Mail, Phone, LogOut } from 'lucide-react-native';
+import { User, Mail, Phone, LogOut, Edit3, Settings, ChevronRight } from 'lucide-react-native';
 import { clearUserData, getUserData } from '../utils/session';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -86,34 +87,46 @@ const ProfileScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header Profile Section */}
-                <View style={styles.headerSection}>
-                    <View style={styles.headerBackground}>
-                        <View style={styles.circle1} />
-                        <View style={styles.circle2} />
-                    </View>
-                    
-                    <View style={styles.profileHeaderContent}>
-                        <View style={styles.imageContainer}>
-                            <Image
-                                source={profile_picture_url ? { uri: profile_picture_url } : require('../../assets/icon.png')}
-                                style={styles.profileImage}
-                            />
+            {/* Fixed Floating Header */}
+            <View style={styles.headerContainer}>
+                <LinearGradient colors={['#1B5E20', '#2E7D32', '#43A047']} style={styles.floatingHeader}>
+                    <View style={styles.headerTopRow}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.headerTitleMain}>Profile</Text>
+                            <Text style={styles.headerSub}>Manage your account settings</Text>
                         </View>
-                        <Text style={styles.userName}>{user_name || 'User Name'}</Text>
-                        <Text style={styles.userRole}>Plantation Manager</Text>
+                        <TouchableOpacity style={styles.settingsBtn} activeOpacity={0.7}>
+                            <Settings color="#fff" size={24} />
+                        </TouchableOpacity>
                     </View>
+                </LinearGradient>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                
+                {/* Profile Picture Card */}
+                <View style={styles.profileCard}>
+                    <View style={styles.imageContainer}>
+                        <Image
+                            source={profile_picture_url ? { uri: profile_picture_url } : require('../../assets/icon.png')}
+                            style={styles.profileImage}
+                        />
+                        <TouchableOpacity style={styles.editImageBtn}>
+                            <Edit3 color="#fff" size={16} />
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.userName}>{user_name || 'User Name'}</Text>
+                    <Text style={styles.userRole}>Plantation Manager</Text>
                 </View>
 
                 {/* Info Cards Section */}
-                <View style={styles.contentSection}>
+                <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Personal Information</Text>
                     
                     <View style={styles.infoCard}>
                         <View style={styles.infoRow}>
-                            <View style={styles.iconBox}>
-                                <User color={COLORS.primary} size={20} />
+                            <View style={[styles.iconBox, { backgroundColor: 'rgba(27, 94, 32, 0.1)' }]}>
+                                <User color="#1B5E20" size={20} />
                             </View>
                             <View style={styles.infoTextContainer}>
                                 <Text style={styles.infoLabel}>Full Name</Text>
@@ -124,8 +137,8 @@ const ProfileScreen = ({ navigation }) => {
                         <View style={styles.divider} />
 
                         <View style={styles.infoRow}>
-                            <View style={styles.iconBox}>
-                                <Mail color={COLORS.primary} size={20} />
+                            <View style={[styles.iconBox, { backgroundColor: 'rgba(27, 94, 32, 0.1)' }]}>
+                                <Mail color="#1B5E20" size={20} />
                             </View>
                             <View style={styles.infoTextContainer}>
                                 <Text style={styles.infoLabel}>Email Address</Text>
@@ -136,8 +149,8 @@ const ProfileScreen = ({ navigation }) => {
                         <View style={styles.divider} />
 
                         <View style={styles.infoRow}>
-                            <View style={styles.iconBox}>
-                                <Phone color={COLORS.primary} size={20} />
+                            <View style={[styles.iconBox, { backgroundColor: 'rgba(27, 94, 32, 0.1)' }]}>
+                                <Phone color="#1B5E20" size={20} />
                             </View>
                             <View style={styles.infoTextContainer}>
                                 <Text style={styles.infoLabel}>Phone Number</Text>
@@ -146,11 +159,26 @@ const ProfileScreen = ({ navigation }) => {
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                        <LogOut color={COLORS.danger} size={20} />
-                        <Text style={styles.logoutText}>Logout</Text>
-                    </TouchableOpacity>
+                    <Text style={styles.sectionTitle}>Account</Text>
+                    
+                    <View style={styles.infoCard}>
+                        <TouchableOpacity style={styles.menuRow}>
+                            <View style={[styles.iconBox, { backgroundColor: '#F5F5F5' }]}>
+                                <Settings color={COLORS.textLight} size={20} />
+                            </View>
+                            <Text style={styles.menuText}>App Settings</Text>
+                            <ChevronRight color={COLORS.textLight} size={20} />
+                        </TouchableOpacity>
 
+                        <View style={styles.divider} />
+
+                        <TouchableOpacity style={styles.menuRow} onPress={handleLogout}>
+                            <View style={[styles.iconBox, { backgroundColor: '#FFEBEE' }]}>
+                                <LogOut color="#C62828" size={20} />
+                            </View>
+                            <Text style={[styles.menuText, { color: '#C62828' }]}>Logout</Text>
+                        </TouchableOpacity>
+                    </View>
                     
                     {/* Padding for bottom tab spacing */}
                     <View style={{ height: 100 }} />
@@ -163,70 +191,78 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: '#F5F7F5', // Match app background
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: COLORS.background,
+        backgroundColor: '#F5F7F5',
     },
     errorText: {
         fontSize: 16,
         color: COLORS.textLight,
         marginBottom: 20,
-        fontFamily: FONTS.regular,
     },
     retryButton: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: '#1B5E20',
         paddingHorizontal: 30,
         paddingVertical: 12,
-        borderRadius: SIZES.radius,
+        borderRadius: 20,
     },
     retryButtonText: {
-        color: COLORS.white,
+        color: '#fff',
         fontSize: 16,
-        fontFamily: FONTS.bold,
+        fontWeight: 'bold',
     },
-    headerSection: {
-        height: 280,
-        position: 'relative',
+    headerContainer: {
+        backgroundColor: '#F5F7F5',
+        zIndex: 10,
+    },
+    floatingHeader: {
+        marginHorizontal: 16,
+        marginTop: 24,
+        paddingHorizontal: 20,
+        paddingTop: 24,
+        paddingBottom: 24,
+        borderRadius: 30,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        marginBottom: 10,
+    },
+    headerTopRow: {
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        paddingBottom: 20,
+        justifyContent: 'space-between',
     },
-    headerBackground: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 220,
-        backgroundColor: COLORS.primary,
-        borderBottomLeftRadius: 40,
-        borderBottomRightRadius: 40,
-        overflow: 'hidden',
+    headerTitleMain: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: '#fff',
     },
-    circle1: {
-        position: 'absolute',
-        width: 200,
-        height: 200,
-        borderRadius: 100,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        top: -50,
-        right: -50,
+    headerSub: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 4,
     },
-    circle2: {
-        position: 'absolute',
-        width: 150,
-        height: 150,
-        borderRadius: 75,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        bottom: -30,
-        left: -40,
-    },
-    profileHeaderContent: {
+    settingsBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
         alignItems: 'center',
-        width: '100%',
+    },
+    scrollContent: {
+        paddingTop: 10,
+    },
+    profileCard: {
+        alignItems: 'center',
+        marginTop: 20,
+        marginBottom: 20,
     },
     imageContainer: {
         position: 'relative',
@@ -238,159 +274,101 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     profileImage: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 110,
+        height: 110,
+        borderRadius: 55,
         borderWidth: 4,
-        borderColor: COLORS.white,
-        backgroundColor: COLORS.lightGray,
+        borderColor: '#fff',
+        backgroundColor: '#E0E0E0',
     },
     editImageBtn: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: COLORS.secondary,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        backgroundColor: '#2E7D32',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 3,
-        borderColor: COLORS.white,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
+        borderColor: '#fff',
         elevation: 3,
     },
     userName: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: COLORS.text,
-        fontFamily: FONTS.bold,
+        color: '#333',
     },
     userRole: {
         fontSize: 14,
-        color: COLORS.primary,
+        color: '#1B5E20',
         marginTop: 4,
-        fontFamily: FONTS.medium,
         fontWeight: '600',
     },
-    contentSection: {
-        paddingHorizontal: SIZES.padding * 1.5,
-        paddingTop: SIZES.padding,
+    sectionContainer: {
+        paddingHorizontal: 16,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: COLORS.text,
-        fontFamily: FONTS.bold,
-        marginBottom: 15,
+        color: '#333',
+        marginBottom: 12,
         marginTop: 10,
+        marginLeft: 8,
     },
     infoCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: 20,
-        padding: SIZES.padding,
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
         elevation: 3,
-        marginBottom: SIZES.padding * 1.5,
+        marginBottom: 24,
     },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
+        paddingVertical: 12,
+    },
+    menuRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
     },
     iconBox: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: COLORS.primary + '15', // light primary background
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 15,
+        marginRight: 16,
     },
     infoTextContainer: {
         flex: 1,
     },
     infoLabel: {
-        fontSize: 13,
-        color: COLORS.textLight,
+        fontSize: 12,
+        color: '#888',
         marginBottom: 4,
-        fontFamily: FONTS.regular,
     },
     infoValue: {
         fontSize: 16,
-        color: COLORS.text,
+        color: '#333',
         fontWeight: '600',
-        fontFamily: FONTS.medium,
+    },
+    menuText: {
+        flex: 1,
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '600',
     },
     divider: {
         height: 1,
         backgroundColor: '#F0F0F0',
-        marginVertical: 5,
-        marginLeft: 59, // Aligns with the text, skipping icon
-    },
-    settingsCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: 20,
-        padding: SIZES.padding,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 3,
-        marginBottom: SIZES.padding * 2,
-    },
-    settingsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-    },
-    settingIconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: '#F5F5F5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    settingsText: {
-        flex: 1,
-        fontSize: 16,
-        color: COLORS.text,
-        fontFamily: FONTS.medium,
-        fontWeight: '500',
-    },
-    settingsArrow: {
-        opacity: 0.5,
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: COLORS.white,
-        borderWidth: 1.5,
-        borderColor: COLORS.danger + '30',
-        borderRadius: 16,
-        paddingVertical: 16,
-        marginBottom: SIZES.padding,
-        shadowColor: COLORS.danger,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    logoutText: {
-        color: COLORS.danger,
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 10,
-        fontFamily: FONTS.bold,
+        marginLeft: 60,
     },
 });
 

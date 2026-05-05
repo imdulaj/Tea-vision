@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config';
 import {
@@ -14,54 +15,7 @@ import { Droplet, Thermometer, Activity, Leaf, Beaker, Sprout, AlertTriangle, Ch
 const screenWidth = Dimensions.get('window').width;
 
 
-const rand = (min, max, decimals = 1) =>
-    parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
-
-const generateRandomSoilData = () => {
-    const r = Math.random();
-    // 20% chance of optimal
-    if (r < 0.2) {
-        return {
-            Nitrogen: rand(45, 75),
-            Phosphorus: rand(22, 38),
-            Potassium: rand(45, 75),
-            pH: rand(5.2, 6.3, 2),
-            Moisture: rand(35, 55),
-            Temperature: rand(22, 30),
-        };
-    }
-    // 20% chance of Nitrogen deficiency
-    if (r < 0.4) {
-        return {
-            Nitrogen: rand(10, 25),
-            Phosphorus: rand(25, 45),
-            Potassium: rand(45, 85),
-            pH: rand(5.5, 6.5, 2),
-            Moisture: rand(40, 60),
-            Temperature: rand(20, 28),
-        };
-    }
-    // 20% chance of phosphorus deficiency
-    if (r < 0.6) {
-        return {
-            Nitrogen: rand(50, 80),
-            Phosphorus: rand(5, 15),
-            Potassium: rand(50, 90),
-            pH: rand(5.0, 6.0, 2),
-            Moisture: rand(30, 50),
-            Temperature: rand(24, 32),
-        };
-    }
-    // Otherwise fully random/potentially multiple deficiencies
-    return {
-        Nitrogen: rand(15, 90),
-        Phosphorus: rand(5, 70),
-        Potassium: rand(20, 130),
-        pH: rand(4.0, 7.5, 2),
-        Moisture: rand(20, 85),
-        Temperature: rand(16, 35),
-    };
-};
+// Mock data generators removed
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ideal ranges for tea cultivation
@@ -73,6 +27,7 @@ const IDEAL = {
     pH: { min: 5.0, max: 6.5, unit: '', label: 'Soil pH', icon: Activity, color: '#9C27B0' },
     Moisture: { min: 30, max: 60, unit: '%', label: 'Moisture', icon: Droplet, color: '#03A9F4' },
     Temperature: { min: 20, max: 32, unit: '°C', label: 'Temperature', icon: Thermometer, color: '#F44336' },
+    EC: { min: 0.1, max: 2.0, unit: 'dS/m', label: 'EC', icon: Activity, color: '#795548' },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -111,6 +66,7 @@ const getParamScore = (key, value) => {
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 const SoilAnalyzerScreen = () => {
+    const navigation = useNavigation();
     const [soilData, setSoilData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -164,6 +120,7 @@ const SoilAnalyzerScreen = () => {
             pH: 0,
             Moisture: 0,
             Temperature: 0,
+            EC: 0,
         };
         setSoilData(zeroData);
         setPrediction(null);
@@ -203,14 +160,30 @@ const SoilAnalyzerScreen = () => {
         loadLocation();
 
         // 1. Reset values to 0 immediately...
-        const zeroData = { Nitrogen: 0, Phosphorus: 0, Potassium: 0, pH: 0.0, Moisture: 0, Temperature: 0 };
+        const zeroData = { Nitrogen: 0, Phosphorus: 0, Potassium: 0, pH: 0.0, Moisture: 0, Temperature: 0, EC: 0 };
         setSoilData(zeroData);
         setPrediction(null);
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 4000));
             refreshCount.current += 1;
-            const data = generateRandomSoilData();
+            const response = await fetch(`${API_BASE_URL}/get-live-sensor`);
+            const result = await response.json();
+            
+            if (!result.success || !result.data) {
+                throw new Error("Failed to fetch live sensor data");
+            }
+            
+            const liveData = result.data;
+            const data = {
+                Nitrogen: liveData.Nitrogen || 0,
+                Phosphorus: liveData.Phosphorus || 0,
+                Potassium: liveData.Potassium || 0,
+                pH: liveData.pH || 0,
+                Moisture: liveData.Moisture || 0,
+                Temperature: liveData.Temperature || liveData.soil_temp || 0,
+                EC: (liveData.EC || 0) / 1000, // Convert from µS/cm to dS/m
+            };
+
             setSoilData(data);
             setHistory(prev => {
                 const entry = { id: Date.now(), timestamp: new Date().toLocaleString(), data };
@@ -224,79 +197,47 @@ const SoilAnalyzerScreen = () => {
                 Potassium: data.Potassium.toFixed(1),
                 pH: data.pH.toFixed(2),
                 Moisture: data.Moisture.toFixed(1),
-                Temperature: data.Temperature.toFixed(1)
+                Temperature: data.Temperature.toFixed(1),
+                EC: data.EC.toFixed(2)
             });
             console.log(`[${ts()}] INFO  SoilAnalyzer  Refresh complete.`);
         } catch (error) {
             console.log(`[${ts()}] ERROR SoilAnalyzer  Refresh failed:`, error.message);
+            Alert.alert("Sensor Error", "Failed to get live sensor data from IoT device.");
         }
     }, [loadLocation]);
 
-    // ── Run fertilizer prediction (Local Hardcoded Logic) ──────────────────
+    // ── Run fertilizer prediction (Backend AI Model) ──────────────────
     const runPrediction = useCallback(async () => {
         if (!soilData) return;
         setPredicting(true);
         const ts = () => new Date().toISOString();
 
-        console.log(`[${ts()}] INFO  SoilAnalyzer  Running local prediction...`);
+        console.log(`[${ts()}] INFO  SoilAnalyzer  Running prediction from backend...`);
         
         try {
-            console.log(`[${ts()}] DATA  SoilAnalyzer  Analyzing Parameters:`, {
-                N: soilData.Nitrogen.toFixed(1),
-                P: soilData.Phosphorus.toFixed(1),
-                K: soilData.Potassium.toFixed(1),
-                pH: soilData.pH.toFixed(2)
+            const response = await fetch(`${API_BASE_URL}/predict-fertilizer`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
             });
-            // Simulate a short processing delay for UX
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            const data = await response.json();
 
-            const { Nitrogen: N, Phosphorus: P, Potassium: K } = soilData;
-            let status = 'optimal';
-            let urgency = 'NONE';
-            let recommendation = 'Soil nutrients are adequate. No fertilizer needed.';
-            let fertilizers = [];
-            let deficiencies = [];
-
-            // Detect Deficiencies
-            if (N < 40) deficiencies.push('N');
-            if (P < 20) deficiencies.push('P');
-            if (K < 40) deficiencies.push('K');
-
-            if (deficiencies.length > 0) {
-                status = 'deficient';
-                
-                // Determine Urgency based on severity
-                const severities = [
-                    (40 - N) / 40,
-                    (20 - P) / 20,
-                    (40 - K) / 40
-                ];
-                const maxSeverity = Math.max(...severities);
-                
-                if (maxSeverity > 0.6) urgency = 'CRITICAL';
-                else if (maxSeverity > 0.3) urgency = 'HIGH';
-                else urgency = 'MODERATE';
-
-                // Determine Recommendation & Fertilizer type
-                if (deficiencies.length === 1) {
-                    if (deficiencies.includes('N')) {
-                        fertilizers.push({ name: 'Urea', npk: '46-0-0', nutrient: 'N', amount: 50, desc: 'High nitrogen source for leaf growth.' });
-                        recommendation = 'Apply Urea to boost nitrogen levels for better vegetative growth.';
-                    } else if (deficiencies.includes('P')) {
-                        fertilizers.push({ name: 'DAP', npk: '18-46-0', nutrient: 'P', amount: 40, desc: 'Provides phosphorus for root development.' });
-                        recommendation = 'Apply DAP to strengthen root systems and overall plant health.';
-                    } else if (deficiencies.includes('K')) {
-                        fertilizers.push({ name: 'MOP', npk: '0-0-60', nutrient: 'K', amount: 45, desc: 'Potassium for disease resistance and yield.' });
-                        recommendation = 'Apply Muriate of Potash (MOP) to improve disease resistance.';
-                    }
-                } else {
-                    fertilizers.push({ name: 'NPK 15-15-15', npk: '15-15-15', nutrient: 'NPK', amount: 65, desc: 'Balanced fertilizer for multi-nutrient deficiency.' });
-                    recommendation = 'Comprehensive nutrient deficiency detected. Apply balanced NPK fertilizer.';
-                }
+            if (!data.success) {
+                throw new Error(data.error || "Failed to fetch prediction");
             }
 
-            const scores = Object.keys(IDEAL).map(k => getParamScore(k, soilData[k]));
-            const overallScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+            const status = data.fertilizer_type === 'None' || data.fertilizer_type === 'No Fertilizer' ? 'optimal' : 'deficient';
+            const urgency = status === 'optimal' ? 'NONE' : 'MODERATE';
+            const overallScore = 80; // Placeholder as actual score comes from analyze-soil
+            const recommendation = data.reason || 'AI recommendation';
+            const fertilizers = data.fertilizer_type === 'None' ? [] : [{
+                name: data.fertilizer_type,
+                npk: 'N/A',
+                nutrient: 'Targeted nutrients based on AI',
+                amount: data.amount_kg_per_ha,
+                desc: data.reason
+            }];
 
             const mappedPrediction = {
                 status,
@@ -304,8 +245,9 @@ const SoilAnalyzerScreen = () => {
                 overallScore,
                 recommendation,
                 fertilizers,
-                deficiencies,
+                deficiencies: [],
                 tips: [
+                    'Confidence: ' + data.confidence_percent + '%',
                     'Optimal application time: Early morning or late evening.',
                     'Ensure soil is moist before application.',
                     'Split doses into 2-3 applications for better absorption.'
@@ -313,7 +255,7 @@ const SoilAnalyzerScreen = () => {
             };
             
             setPrediction(mappedPrediction);
-            console.log(`[${ts()}] INFO  SoilAnalyzer  Local prediction complete.`);
+            console.log(`[${ts()}] INFO  SoilAnalyzer  Backend prediction complete.`);
 
         } catch (error) {
             console.error("Prediction error:", error);
@@ -469,6 +411,21 @@ const SoilAnalyzerScreen = () => {
                                         <Text style={styles.predictBtnText}>  Predict Fertilizer</Text>
                                     </>
                                 )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.predictBtn, { marginTop: 12 }]}
+                            onPress={() => navigation.navigate('WeatherForecast')}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#0288D1', '#03A9F4']}
+                                style={styles.predictBtnGradient}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            >
+                                <CloudRain color="#fff" size={20} />
+                                <Text style={styles.predictBtnText}>  Check Weather Forecast</Text>
                             </LinearGradient>
                         </TouchableOpacity>
 
