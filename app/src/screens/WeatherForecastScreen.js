@@ -51,7 +51,7 @@ const WeatherForecastScreen = () => {
                 setLocationName(name);
             }
 
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&forecast_days=3`;
+            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode&timezone=auto&forecast_days=7`;
             const response = await fetch(weatherUrl);
             const data = await response.json();
             
@@ -94,7 +94,7 @@ const WeatherForecastScreen = () => {
                         <Text style={styles.headerSub}>{locationName}</Text>
                     </View>
                 </View>
-                <Text style={styles.headerHint}>3-Day Tea Estate Outlook</Text>
+                <Text style={styles.headerHint}>7-Day Tea Estate Outlook</Text>
             </LinearGradient>
 
             <ScrollView
@@ -151,41 +151,42 @@ const WeatherForecastScreen = () => {
                             </LinearGradient>
                         </View>
 
-                        <Text style={styles.sectionSubtitle}>Upcoming Days</Text>
+                        <Text style={styles.sectionSubtitle}>7-Day Forecast</Text>
 
-                        {forecast.slice(1).map((day, i) => (
-                            <View key={i} style={styles.dayCard}>
-                                <View style={styles.dayBodyCompact}>
-                                    <View style={styles.dateBox}>
-                                        <Text style={styles.dayNameShort}>
-                                            {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                                        </Text>
-                                        <Text style={styles.dateNum}>
-                                            {new Date(day.date).getDate()}
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.iconBoxSmall}>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false} 
+                            contentContainerStyle={styles.weeklyScrollContainer}
+                        >
+                            {forecast.map((day, i) => (
+                                <View key={i} style={[styles.weeklyCard, i === 0 && styles.weeklyCardActive]}>
+                                    <Text style={[styles.weeklyDay, i === 0 && styles.weeklyTextActive]}>
+                                        {i === 0 ? 'Today' : new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                                    </Text>
+                                    <Text style={[styles.weeklyDate, i === 0 && styles.weeklyTextActive]}>
+                                        {new Date(day.date).getDate()}
+                                    </Text>
+                                    
+                                    <View style={styles.weeklyIconBox}>
                                         {getWeatherIcon(day.code)}
                                     </View>
-
-                                    <View style={styles.tempBoxSmall}>
-                                        <Text style={styles.tempHigh}>{Math.round(day.maxTemp)}°C</Text>
-                                        <Text style={styles.tempLow}>{Math.round(day.minTemp)}°C</Text>
-                                    </View>
-
-                                    <View style={styles.rainBoxSmall}>
-                                        <View style={styles.rainLabelRow}>
-                                            <Droplet size={12} color="#039BE5" />
-                                            <Text style={styles.rainValueSmall}>{day.rain}mm</Text>
-                                        </View>
-                                        <View style={styles.rainBarBg}>
-                                            <View style={[styles.rainBarFill, { width: `${Math.min(day.rain * 10, 100)}%` }]} />
-                                        </View>
+                                    
+                                    <Text style={[styles.weeklyTempHigh, i === 0 && styles.weeklyTextActive]}>
+                                        {Math.round(day.maxTemp)}°
+                                    </Text>
+                                    <Text style={[styles.weeklyTempLow, i === 0 && styles.weeklyTextActive]}>
+                                        {Math.round(day.minTemp)}°
+                                    </Text>
+                                    
+                                    <View style={styles.weeklyRainBox}>
+                                        <Droplet size={12} color={i === 0 ? "#E8F5E9" : "#039BE5"} />
+                                        <Text style={[styles.weeklyRainText, i === 0 && styles.weeklyTextActive]}>
+                                            {day.rain}mm
+                                        </Text>
                                     </View>
                                 </View>
-                            </View>
-                        ))}
+                            ))}
+                        </ScrollView>
                     </View>
                 ) : (
                     <View style={styles.errorContainer}>
@@ -370,69 +371,72 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.05)',
     },
 
-    // Compact styles for upcoming days
-    dayBodyCompact: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
+    // Weekly horizontal card styles
+    weeklyScrollContainer: {
+        paddingVertical: 10,
+        gap: 12,
     },
-    dateBox: {
-        width: 50,
+    weeklyCard: {
+        width: 80,
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        paddingVertical: 16,
         alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.02)',
     },
-    dayNameShort: {
+    weeklyCardActive: {
+        backgroundColor: '#2E7D32',
+        borderColor: '#1B5E20',
+    },
+    weeklyDay: {
         fontSize: 14,
         fontWeight: 'bold',
         color: COLORS.text,
+        marginBottom: 2,
     },
-    dateNum: {
+    weeklyDate: {
         fontSize: 12,
         color: COLORS.textLight,
+        marginBottom: 12,
     },
-    iconBoxSmall: {
-        width: 50,
-        alignItems: 'center',
-        marginHorizontal: 10,
+    weeklyTextActive: {
+        color: '#fff',
     },
-    tempBoxSmall: {
-        flex: 1,
+    weeklyIconBox: {
+        height: 40,
         justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
     },
-    tempHigh: {
-        fontSize: 17,
+    weeklyTempHigh: {
+        fontSize: 18,
         fontWeight: 'bold',
         color: COLORS.text,
     },
-    tempLow: {
+    weeklyTempLow: {
         fontSize: 13,
         color: COLORS.textLight,
+        marginBottom: 10,
     },
-    rainBoxSmall: {
-        width: 80,
-        alignItems: 'flex-end',
-    },
-    rainLabelRow: {
+    weeklyRainBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        backgroundColor: 'rgba(3,155,229,0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
     },
-    rainValueSmall: {
-        fontSize: 12,
+    weeklyRainText: {
+        fontSize: 10,
         fontWeight: 'bold',
         color: '#039BE5',
         marginLeft: 4,
-    },
-    rainBarBg: {
-        height: 6,
-        width: '100%',
-        backgroundColor: '#E1F5FE',
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    rainBarFill: {
-        height: '100%',
-        backgroundColor: '#039BE5',
-        borderRadius: 3,
     },
 
     errorContainer: {

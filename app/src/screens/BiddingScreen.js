@@ -39,19 +39,19 @@ const BiddingScreen = () => {
     useEffect(() => {
         const teaTypes = ['FBOP', 'BOP', 'Dust', 'Pekoe', 'Silver Tips'];
         const trends = ['up', 'down'];
-        
+
         const interval = setInterval(() => {
             if (Math.random() > 0.4) {
                 const randomTea = teaTypes[Math.floor(Math.random() * teaTypes.length)];
                 const randomTrend = trends[Math.floor(Math.random() * trends.length)];
                 const randomPercent = (Math.random() * 3 + 0.5).toFixed(1);
-                
+
                 const newAlert = {
                     id: Date.now().toString(),
                     teaType: randomTea,
                     trend: randomTrend,
                     percentage: randomPercent,
-                    message: randomTrend === 'up' 
+                    message: randomTrend === 'up'
                         ? `Global Demand: ${randomTea} prices increased by ${randomPercent}%`
                         : `Market Surplus: ${randomTea} prices dropped by ${randomPercent}%`,
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -105,9 +105,9 @@ const BiddingScreen = () => {
                         const existingIds = new Set(prev.map(p => p.id));
                         const uniqueNew = newAlerts.filter(a => !existingIds.has(a.id));
                         if (uniqueNew.length === 0) return prev;
-                        
+
                         setUnreadCount(count => count + uniqueNew.length);
-                        
+
                         // Show banner for the most recent outbid alert
                         setLatestAlert(uniqueNew[0]);
                         Animated.sequence([
@@ -205,7 +205,7 @@ const BiddingScreen = () => {
             Alert.alert('Login Required', 'Please sign in again before placing a bid.');
             return;
         }
-        
+
         console.log(`[${ts()}] INFO  BiddingScreen  Placing bid of Rs. ${bidAmount} on item ID ${selectedBid.id}...`);
 
         try {
@@ -303,9 +303,9 @@ const BiddingScreen = () => {
     };
 
     const renderBidItem = (item) => (
-        <TouchableOpacity 
-            key={item.id} 
-            style={styles.bidCard} 
+        <TouchableOpacity
+            key={item.id}
+            style={styles.bidCard}
             onPress={() => { setSelectedBid(item); setShowBidModal(true); }}
             activeOpacity={0.95}
         >
@@ -333,7 +333,7 @@ const BiddingScreen = () => {
                 <View style={styles.detailsBlock}>
                     <Text style={styles.bidTitle} numberOfLines={1}>{item.title}</Text>
                     <Text style={styles.bidDesc} numberOfLines={1}>{item.description || 'Premium selection from central estates.'}</Text>
-                    
+
                     <View style={styles.metaRow}>
                         <View style={styles.metaItem}>
                             <ShoppingBag size={12} color={COLORS.textLight} />
@@ -461,7 +461,7 @@ const BiddingScreen = () => {
                                     <X color={COLORS.textLight} size={24} />
                                 </TouchableOpacity>
                             </View>
-                            
+
                             <View style={styles.quickInfoBox}>
                                 <Text style={styles.quickInfoLabel}>Current Highest</Text>
                                 <Text style={styles.quickInfoValue}>{selectedBid?.currentBid}</Text>
@@ -611,7 +611,7 @@ const BiddingScreen = () => {
                                     notifications.filter(n => n.type === activeNotificationTab).map((notif) => (
                                         <View key={notif.id} style={styles.notificationItem}>
                                             <View style={[styles.trendIconBox, notif.trend === 'up' ? { backgroundColor: '#E8F5E9' } : { backgroundColor: '#FFEBEE' }]}>
-                                                {notif.trend === 'up' 
+                                                {notif.trend === 'up'
                                                     ? <TrendingUp color="#2E7D32" size={20} />
                                                     : <TrendingDown color="#C62828" size={20} />
                                                 }
